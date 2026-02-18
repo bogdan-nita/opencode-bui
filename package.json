@@ -1,0 +1,29 @@
+{
+  "name": "opencode-telegram-plugin-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/plugin.ts",
+    "start": "node --enable-source-maps dist/plugin.js",
+    "build": "tsc -p tsconfig.json",
+    "build:plugin": "mkdir -p /Users/bogdan_nita/.config/opencode/plugins && esbuild src/plugin.ts --bundle --platform=node --format=esm --target=node20 --outfile=/Users/bogdan_nita/.config/opencode/plugins/plugin.js",
+    "watch:plugin": "mkdir -p /Users/bogdan_nita/.config/opencode/plugins && esbuild src/plugin.ts --bundle --platform=node --format=esm --target=node20 --outfile=/Users/bogdan_nita/.config/opencode/plugins/plugin.js --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.2.6",
+    "dotenv": "^16.4.7",
+    "grammy": "^1.38.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.12.0",
+    "esbuild": "^0.25.10",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3"
+  }
+}
