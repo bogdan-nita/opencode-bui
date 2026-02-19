@@ -215,7 +215,6 @@ cli.command("doctor", "Show runtime diagnostics").action(async () => {
       `- OpenCode binary: ${cfg.opencodeBin}`,
       `- OpenCode attach URL: ${cfg.opencodeAttachUrl || "not set"}`,
       `- Session idle timeout: ${cfg.sessionIdleTimeoutSeconds}s`,
-      `- Auto attachments enabled: ${process.env.BUI_AUTO_ATTACHMENTS === "1" ? "yes" : "no"}`,
       `- Agent bridge tools prompt: ${process.env.BUI_AGENT_BRIDGE_TOOLS === "0" ? "disabled" : "enabled"}`,
       `- OpenCode eager start: ${process.env.BUI_OPENCODE_EAGER_START === "0" ? "disabled" : "enabled"}`,
       `- Typing indicator: ${process.env.BUI_TYPING_INDICATOR === "0" ? "disabled" : "enabled"}`,

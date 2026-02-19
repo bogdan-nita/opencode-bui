@@ -74,7 +74,6 @@ Bridge command registration includes native BUI commands plus command markdown f
 
 - `BUI_MAX_ATTACHMENTS_PER_MESSAGE` (default `6`) limits outbound attachment count per message.
 - `BUI_MAX_ATTACHMENT_BYTES` (default `10485760`) skips outbound attachments larger than the limit.
-- `BUI_AUTO_ATTACHMENTS` (default `0`) controls whether OpenCode-detected local files are auto-sent to chat.
 - With `BUI_AGENT_BRIDGE_TOOLS=1` (default), agent can request explicit attachment send by emitting lines in output:
   - `@bui.attach /absolute/or/relative/path | optional caption`
 - When files are skipped, BUI posts a reason in chat.

@@ -101,7 +101,6 @@ Common environment variables:
 - `BUI_DB_PATH` (optional)
 - `BUI_MAX_ATTACHMENTS_PER_MESSAGE` (optional, default `6`)
 - `BUI_MAX_ATTACHMENT_BYTES` (optional, default `10485760`)
-- `BUI_AUTO_ATTACHMENTS` (optional, default `0`; set `1` to send OpenCode-detected local files automatically)
 - `BUI_AGENT_BRIDGE_TOOLS` (optional, default `1`; injects bridge tool instructions so agent can request explicit attachments)
 - `BUI_OPENCODE_EAGER_START` (optional, default `1`; pre-warms OpenCode SDK context at runtime startup)
 - `BUI_TYPING_INDICATOR` (optional, default `1`; sends typing indicator while runs are active)
