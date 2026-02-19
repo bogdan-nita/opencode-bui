@@ -178,13 +178,13 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
     let flushing = Promise.resolve();
 
-    const renderActivityText = (status?: string): string => {
+    const renderActivityText = (): string => {
       const recent = activityLines.slice(-activityRetainLines);
       const body = recent.map((line) => `> ${line}`);
-      const lines = [status ? `OpenCode ${status}` : "OpenCode activity", ...body];
+      const lines = body.length > 0 ? body : ["> run started"];
       let text = lines.join("\n");
       while (text.length > 3500 && lines.length > 2) {
-        lines.splice(1, 1);
+        lines.splice(0, 1);
         text = lines.join("\n");
       }
       return text;
@@ -199,14 +199,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       if (bridge.upsertActivityMessage) {
         activityMessageToken = await bridge.upsertActivityMessage({
           conversation: envelope.conversation,
-          text: renderActivityText("activity"),
+          text: renderActivityText(),
           ...(activityMessageToken ? { token: activityMessageToken } : {}),
         });
       } else {
         await bridge.send({
           bridgeId: envelope.bridgeId,
           conversation: envelope.conversation,
-          text: renderActivityText("activity"),
+          text: renderActivityText(),
         });
       }
       if (activityQueue.length > 0) {
@@ -232,13 +232,13 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       if (bridge.upsertActivityMessage) {
         activityMessageToken = await bridge.upsertActivityMessage({
           conversation: envelope.conversation,
-          text: renderActivityText("starting"),
+          text: renderActivityText(),
         });
       } else {
         await bridge.send({
           bridgeId: envelope.bridgeId,
           conversation: envelope.conversation,
-          text: renderActivityText("starting"),
+          text: renderActivityText(),
         });
       }
     }
@@ -377,7 +377,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
         if (bridge.upsertActivityMessage) {
           await bridge.upsertActivityMessage({
             conversation: envelope.conversation,
-            text: renderActivityText("interrupted"),
+            text: renderActivityText(),
             ...(activityMessageToken ? { token: activityMessageToken } : {}),
           });
         }
@@ -393,7 +393,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       if (bridge.upsertActivityMessage) {
         await bridge.upsertActivityMessage({
           conversation: envelope.conversation,
-          text: renderActivityText("failed"),
+          text: renderActivityText(),
           ...(activityMessageToken ? { token: activityMessageToken } : {}),
         });
       }
@@ -415,7 +415,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     if (bridge.upsertActivityMessage) {
       activityMessageToken = await bridge.upsertActivityMessage({
         conversation: envelope.conversation,
-        text: renderActivityText("completed"),
+        text: renderActivityText(),
         ...(activityMessageToken ? { token: activityMessageToken } : {}),
       });
     }
