@@ -2,6 +2,7 @@
   "name": "opencode-bui",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "bin": {
     "opencode-bui": "src/bin/opencode-bui.ts"
