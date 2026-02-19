@@ -110,6 +110,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "OPENCODE_BIN=opencode",
     "OPENCODE_ATTACH_URL=",
     "BUI_SESSION_IDLE_TIMEOUT_SECONDS=900",
+    "BUI_AUTO_ATTACHMENTS=0",
     "BUI_LOG_TO_FILE=1",
     "BUI_LOG_FILE=",
     "",

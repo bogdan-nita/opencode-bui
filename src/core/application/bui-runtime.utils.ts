@@ -425,6 +425,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     const maxAttachmentsPerMessage = Number.isFinite(maxAttachmentsRaw) && maxAttachmentsRaw > 0 ? maxAttachmentsRaw : 6;
     const maxAttachmentBytesRaw = Number.parseInt(process.env.BUI_MAX_ATTACHMENT_BYTES || "10485760", 10);
     const maxAttachmentBytes = Number.isFinite(maxAttachmentBytesRaw) && maxAttachmentBytesRaw > 0 ? maxAttachmentBytesRaw : 10485760;
+    const autoAttachmentsEnabled = process.env.BUI_AUTO_ATTACHMENTS === "1";
 
     for (const message of outbound) {
       logger.info(
@@ -443,7 +444,13 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       if (message.attachments && message.attachments.length > 0) {
         const kept = [] as NonNullable<typeof message.attachments>;
         const skipped: string[] = [];
+        if (!autoAttachmentsEnabled) {
+          skipped.push(`auto-attachments disabled (${message.attachments.length} detected)`);
+        }
         for (const attachment of message.attachments.slice(0, maxAttachmentsPerMessage)) {
+          if (!autoAttachmentsEnabled) {
+            continue;
+          }
           let size = -1;
           try {
             const details = await stat(attachment.filePath);

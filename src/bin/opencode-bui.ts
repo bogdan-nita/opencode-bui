@@ -215,6 +215,7 @@ cli.command("doctor", "Show runtime diagnostics").action(async () => {
       `- OpenCode binary: ${cfg.opencodeBin}`,
       `- OpenCode attach URL: ${cfg.opencodeAttachUrl || "not set"}`,
       `- Session idle timeout: ${cfg.sessionIdleTimeoutSeconds}s`,
+      `- Auto attachments enabled: ${process.env.BUI_AUTO_ATTACHMENTS === "1" ? "yes" : "no"}`,
       `- File logging enabled: ${process.env.BUI_LOG_TO_FILE === "0" ? "no" : "yes"}`,
       `- Log file path: ${process.env.BUI_LOG_FILE || `${process.cwd()}/opencode-bui.log`}`,
     ];
