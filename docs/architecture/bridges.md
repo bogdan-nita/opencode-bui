@@ -23,6 +23,7 @@ This keeps bridge command menus aligned with current OpenCode command sets.
 
 - Telegram: `src/bridges/telegram/telegram.definition.ts`, `src/bridges/telegram/telegram.bridge.ts`
 - Discord: `src/bridges/discord/discord.definition.ts`, `src/bridges/discord/discord.bridge.ts`
+- Plugin bridge endpoint: `src/core/application/bui-runtime.utils.ts` (`/v1/plugin/send`, session->conversation forwarding)
 
 ## Adding a new bridge
 

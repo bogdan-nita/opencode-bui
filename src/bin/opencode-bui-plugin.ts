@@ -1,6 +1,34 @@
 #!/usr/bin/env bun
 
 import { cac } from "cac";
+import { defaultPluginDiscoveryPath, readPluginBridgeDiscovery } from "@infra/plugin-bridge/discovery.utils.js";
+
+async function resolveBridgeEndpoint(input: { url?: string; token?: string; discoveryPath?: string }): Promise<{ url: string; token: string }> {
+  if (input.url && input.token) {
+    return { url: input.url, token: input.token };
+  }
+
+  const explicitDiscoveryPath = input.discoveryPath || process.env.BUI_PLUGIN_BRIDGE_DISCOVERY;
+  const candidates = [
+    explicitDiscoveryPath,
+    process.env.BUI_PLUGIN_DISCOVERY,
+    defaultPluginDiscoveryPath(),
+  ].filter((value): value is string => Boolean(value));
+
+  for (const path of candidates) {
+    const discovery = await readPluginBridgeDiscovery(path);
+    if (discovery) {
+      return {
+        url: input.url || discovery.url,
+        token: input.token || discovery.token,
+      };
+    }
+  }
+
+  throw new Error(
+    "Bridge endpoint discovery failed. Set BUI_PLUGIN_BRIDGE_URL and BUI_PLUGIN_BRIDGE_TOKEN or provide a discovery file.",
+  );
+}
 
 const cli = cac("opencode-bui-plugin");
 
@@ -13,6 +41,9 @@ cli
   })
   .option("--caption <text>", "Caption used for all files")
   .option("--kind <kind>", "Attachment kind (image|audio|video|document)")
+  .option("--url <url>", "Bridge endpoint URL")
+  .option("--token <token>", "Bridge shared secret")
+  .option("--discovery <path>", "Path to bridge discovery file")
   .action(async (options) => {
     const sessionId = String(options.session || "").trim();
     if (!sessionId) {
@@ -42,13 +73,17 @@ cli
         : {}),
     };
 
-    const url = process.env.BUI_PLUGIN_BRIDGE_URL || "http://127.0.0.1:4499/v1/plugin/send";
-    const token = process.env.BUI_PLUGIN_BRIDGE_TOKEN;
-    const response = await fetch(url, {
+    const endpoint = await resolveBridgeEndpoint({
+      url: (typeof options.url === "string" ? options.url : process.env.BUI_PLUGIN_BRIDGE_URL) || undefined,
+      token: (typeof options.token === "string" ? options.token : process.env.BUI_PLUGIN_BRIDGE_TOKEN) || undefined,
+      discoveryPath: typeof options.discovery === "string" ? options.discovery : undefined,
+    });
+
+    const response = await fetch(endpoint.url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        ...(token ? { "x-bui-token": token } : {}),
+        "x-bui-token": endpoint.token,
       },
       body: JSON.stringify(payload),
     });

@@ -1,0 +1,12 @@
+{
+  "name": "opencode-bui-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "opencode-bui-plugin": "src/bin/opencode-bui-plugin.ts"
+  },
+  "scripts": {
+    "send": "bun src/bin/opencode-bui-plugin.ts send"
+  }
+}

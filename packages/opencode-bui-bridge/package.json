@@ -1,0 +1,14 @@
+{
+  "name": "opencode-bui-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "opencode-bui-bridge": "src/bin/opencode-bui-bridge.ts"
+  },
+  "scripts": {
+    "start": "bun src/bin/opencode-bui-bridge.ts start",
+    "doctor": "bun src/bin/opencode-bui-bridge.ts doctor",
+    "onboard": "bun src/bin/opencode-bui-bridge.ts onboard"
+  }
+}

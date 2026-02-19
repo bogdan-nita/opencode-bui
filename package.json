@@ -4,20 +4,22 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "opencode-bui": "src/bin/opencode-bui.ts",
-    "opencode-bui-plugin": "src/bin/opencode-bui-plugin.ts"
-  },
+  "workspaces": [
+    "packages/opencode-bui-bridge",
+    "packages/opencode-bui-plugin"
+  ],
   "scripts": {
     "dev": "bun --watch src/bin/opencode-bui.ts start",
     "dev:telegram": "bun --watch src/standalone-bot.ts",
     "start": "bun src/bin/opencode-bui.ts start",
+    "start:bridge": "bun src/bin/opencode-bui.ts start",
+    "start:plugin:send": "bun src/bin/opencode-bui-plugin.ts send",
     "plugin:send": "bun src/bin/opencode-bui-plugin.ts send",
     "onboard": "bun src/bin/opencode-bui.ts onboard",
     "doctor": "bun src/bin/opencode-bui.ts doctor",
     "bridge:test": "bun src/bin/opencode-bui.ts bridge:test",
-    "build": "bun build src/bin/opencode-bui.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
-    "lint": "bunx oxlint src test",
+    "build": "bun build src/bin/opencode-bui.ts src/bin/opencode-bui-plugin.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
+    "lint": "bunx oxlint src test packages",
     "format": "bunx oxfmt --config .oxfmt.json .",
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",

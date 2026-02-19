@@ -20,6 +20,9 @@ import type { InboundEnvelope } from "../domain/envelope.types.js";
 import { startAllBridges, stopAllBridges, waitForShutdownSignal } from "./bridge-supervisor.utils.js";
 import { bridgeDefinitionById } from "./bridge-registry.utils.js";
 import { z } from "zod";
+import { randomBytes } from "node:crypto";
+import { resolve } from "node:path";
+import { writePluginBridgeDiscovery } from "@infra/plugin-bridge/discovery.utils.js";
 
 const nativeCommands = [
   { command: "start", description: "Show bot help" },
@@ -93,7 +96,12 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const pluginBridgeHost = process.env.BUI_PLUGIN_BRIDGE_HOST?.trim() || "127.0.0.1";
   const pluginBridgePortRaw = Number.parseInt(process.env.BUI_PLUGIN_BRIDGE_PORT || "4499", 10);
   const pluginBridgePort = Number.isFinite(pluginBridgePortRaw) && pluginBridgePortRaw > 0 ? pluginBridgePortRaw : 4499;
-  const pluginBridgeToken = process.env.BUI_PLUGIN_BRIDGE_TOKEN?.trim();
+  const configuredPluginBridgeToken = process.env.BUI_PLUGIN_BRIDGE_TOKEN?.trim();
+  const pluginBridgeToken = configuredPluginBridgeToken && configuredPluginBridgeToken.length > 0
+    ? configuredPluginBridgeToken
+    : randomBytes(24).toString("hex");
+  const pluginDiscoveryPath = process.env.BUI_PLUGIN_BRIDGE_DISCOVERY?.trim()
+    || resolve(input.config.paths.runtimeDir, "plugin-bridge.discovery.json");
   let pluginBridgeServer: { stop: (closeActiveConnections?: boolean) => void } | undefined;
   const bunRuntime = (globalThis as { Bun?: { serve: (input: { hostname: string; port: number; fetch: (request: Request) => Promise<Response> | Response }) => { stop: (closeActiveConnections?: boolean) => void } } }).Bun;
 
@@ -155,7 +163,17 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
         return new Response("ok", { status: 200 });
       },
     });
-    logger.info({ host: pluginBridgeHost, port: pluginBridgePort, tokenRequired: Boolean(pluginBridgeToken) }, "[bui] Plugin bridge server started.");
+    const pluginBridgeUrl = `http://${pluginBridgeHost}:${pluginBridgePort}/v1/plugin/send`;
+    await writePluginBridgeDiscovery(pluginDiscoveryPath, {
+      url: pluginBridgeUrl,
+      token: pluginBridgeToken,
+      updatedAt: new Date().toISOString(),
+      pid: process.pid,
+    });
+    if (!configuredPluginBridgeToken) {
+      logger.info({ discoveryPath: pluginDiscoveryPath }, "[bui] Generated plugin bridge token and wrote discovery file.");
+    }
+    logger.info({ host: pluginBridgeHost, port: pluginBridgePort, discoveryPath: pluginDiscoveryPath }, "[bui] Plugin bridge server started.");
   } else if (pluginBridgeServerEnabled) {
     logger.warn("[bui] Plugin bridge server requested but Bun runtime API is unavailable.");
   }

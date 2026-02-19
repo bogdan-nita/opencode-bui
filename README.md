@@ -109,6 +109,7 @@ Common environment variables:
 - `BUI_PLUGIN_BRIDGE_PORT` (optional, default `4499`)
 - `BUI_PLUGIN_BRIDGE_TOKEN` (optional, recommended for local auth)
 - `BUI_PLUGIN_BRIDGE_URL` (optional, plugin helper endpoint URL)
+- `BUI_PLUGIN_BRIDGE_DISCOVERY` (optional, default `<runtimeDir>/plugin-bridge.discovery.json`)
 - `BUI_LOG_TO_FILE` (optional, default `1`)
 - `BUI_LOG_FILE` (optional, default `./opencode-bui.log`)
 
@@ -150,7 +151,10 @@ bun run build
 
 ## Project Structure
 
-- `src/bin/opencode-bui.ts`: CLI entrypoint
+- `packages/opencode-bui-bridge/*`: bridge package wrapper and bridge-facing scripts
+- `packages/opencode-bui-plugin/*`: plugin package wrapper and plugin-facing scripts
+- `src/bin/opencode-bui.ts`: bridge runtime CLI implementation
+- `src/bin/opencode-bui-plugin.ts`: plugin helper CLI implementation
 - `src/core/domain/*`: shared bridge-agnostic contracts and schemas
 - `src/core/ports/*`: interfaces/ports
 - `src/core/application/*`: runtime orchestration and routing

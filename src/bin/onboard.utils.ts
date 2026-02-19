@@ -117,6 +117,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "BUI_PLUGIN_BRIDGE_HOST=127.0.0.1",
     "BUI_PLUGIN_BRIDGE_PORT=4499",
     "BUI_PLUGIN_BRIDGE_TOKEN=",
+    "BUI_PLUGIN_BRIDGE_DISCOVERY=",
     "BUI_PLUGIN_BRIDGE_URL=http://127.0.0.1:4499/v1/plugin/send",
     "BUI_LOG_TO_FILE=1",
     "BUI_LOG_FILE=",

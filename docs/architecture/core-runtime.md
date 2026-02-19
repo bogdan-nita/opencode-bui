@@ -8,6 +8,8 @@
 - `src/infra`: concrete implementations (config loader, runtime fs/process helpers, db, stores, lock, OpenCode client).
 - `src/bridges/<name>`: bridge-specific edge adapters and bridge definitions.
 - `src/bin`: CLI entrypoints and onboarding.
+- `packages/opencode-bui-bridge`: distributable bridge package wrapper.
+- `packages/opencode-bui-plugin`: distributable plugin package wrapper.
 
 ## Runtime flow
 
