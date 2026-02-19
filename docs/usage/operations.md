@@ -77,11 +77,17 @@ Bridge command registration includes native BUI commands plus command markdown f
 - Secret gating: bridge requires `x-bui-token` (from `BUI_PLUGIN_BRIDGE_TOKEN` or generated token).
 - Autodiscovery: bridge writes discovery file at `<runtimeDir>/plugin-bridge.discovery.json` (override with `BUI_PLUGIN_BRIDGE_DISCOVERY`).
 - OpenCode plugin tools:
-  - `bui_bridge_boot` starts bridge if missing.
+  - plugin auto-boots bridge in background on plugin load.
   - `bui_send` sends text/files from current OpenCode session to bridge chat.
 - OpenCode plugin file example (`~/.config/opencode/plugins/opencode-bui-plugin.js`):
   - `import { OpenCodeBuiPlugin } from "opencode-bui"`
   - `export const BuiBridgePlugin = OpenCodeBuiPlugin`
+
+Development hot reload knobs:
+
+- `BUI_DEV_HOT_RELOAD=1` boots bridge using `bun --watch src/bin/opencode-bui.ts start`.
+- `BUI_PLUGIN_HOT_RELOAD=1` reloads plugin runtime implementation on each tool execution.
+- `BUI_BRIDGE_BOOT_COMMAND` overrides bridge boot command completely.
 
 Session visibility note:
 

@@ -67,7 +67,7 @@ export const BuiBridgePlugin = OpenCodeBuiPlugin
 
 Useful plugin tools from OpenCode sessions:
 
-- `bui_bridge_boot` starts the bridge daemon if needed.
+- Bridge auto-boot is attempted when OpenCode loads the plugin.
 - `bui_send` sends text/files from the active session to configured bridge chat.
 
 Optional local binary link:
@@ -137,6 +137,9 @@ Common environment variables:
 - `BUI_PLUGIN_BRIDGE_TOKEN` (optional, recommended for local auth)
 - `BUI_PLUGIN_BRIDGE_URL` (optional, plugin helper endpoint URL)
 - `BUI_PLUGIN_BRIDGE_DISCOVERY` (optional, default `<runtimeDir>/plugin-bridge.discovery.json`)
+- `BUI_BRIDGE_BOOT_COMMAND` (optional, override auto-boot command)
+- `BUI_DEV_HOT_RELOAD` (optional, set `1` to auto-boot bridge with Bun watch mode)
+- `BUI_PLUGIN_HOT_RELOAD` (optional, set `1` to reload plugin runtime module on each tool call)
 - `BUI_LOG_TO_FILE` (optional, default `1`)
 - `BUI_LOG_FILE` (optional, default `./opencode-bui.log`)
 

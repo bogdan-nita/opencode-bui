@@ -221,6 +221,9 @@ cli.command("doctor", "Show runtime diagnostics").action(async () => {
       `- Plugin bridge server: ${process.env.BUI_PLUGIN_BRIDGE_SERVER === "1" ? "enabled" : "disabled"}`,
       `- Plugin bridge endpoint: http://${process.env.BUI_PLUGIN_BRIDGE_HOST || "127.0.0.1"}:${process.env.BUI_PLUGIN_BRIDGE_PORT || "4499"}/v1/plugin/send`,
       `- Plugin bridge discovery: ${process.env.BUI_PLUGIN_BRIDGE_DISCOVERY || `${cfg.paths.runtimeDir}/plugin-bridge.discovery.json`}`,
+      `- Bridge boot command: ${process.env.BUI_BRIDGE_BOOT_COMMAND || "opencode-bui start"}`,
+      `- Dev bridge hot reload: ${process.env.BUI_DEV_HOT_RELOAD === "1" ? "enabled" : "disabled"}`,
+      `- Plugin hot reload: ${process.env.BUI_PLUGIN_HOT_RELOAD === "1" ? "enabled" : "disabled"}`,
       `- File logging enabled: ${process.env.BUI_LOG_TO_FILE === "0" ? "no" : "yes"}`,
       `- Log file path: ${process.env.BUI_LOG_FILE || `${process.cwd()}/opencode-bui.log`}`,
     ];
@@ -248,7 +251,7 @@ cli
         ...(pluginFilePath
           ? [`- Plugin file: ${pluginFilePath}`]
           : ["- Plugin file: skipped"]),
-        "- Plugin tools: use bui_bridge_boot then bui_send from OpenCode",
+        "- Plugin tool: use bui_send from OpenCode (bridge auto-boots)",
         "- Starting runtime with enabled bridges...",
       ];
       logger.info(lines.join("\n"));
