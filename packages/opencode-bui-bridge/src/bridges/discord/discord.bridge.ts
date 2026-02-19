@@ -117,6 +117,14 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
     },
     async start(nextHandlers) {
       handlers = nextHandlers;
+      const dispatchInbound = (envelope: Parameters<BridgeRuntimeHandlers["onInbound"]>[0]) => {
+        if (!handlers) {
+          return;
+        }
+        void handlers.onInbound(envelope).catch((error) => {
+          logger.error({ error, bridgeId: "discord", eventType: envelope.event.type }, "[bui] Failed to process inbound discord event.");
+        });
+      };
       if (started) {
         return;
       }
@@ -156,7 +164,7 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
                 ? "video"
                 : "document";
 
-          await handlers.onInbound({
+          dispatchInbound({
             ...baseEnvelope,
             event: {
               type: "media",
@@ -173,7 +181,7 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
           return;
         }
 
-        await handlers.onInbound({
+        dispatchInbound({
           ...baseEnvelope,
           event: message.content.trim().startsWith("/")
             ? {
@@ -200,7 +208,7 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
             .map((option) => `${option.name}:${String(option.value ?? "")}`)
             .join(" ");
 
-          await handlers.onInbound({
+          dispatchInbound({
             bridgeId: "discord",
             conversation: toConversation(interaction.channelId, interaction.channel?.isThread() ? interaction.channel.id : undefined),
             channel: toChannel({
@@ -232,7 +240,7 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
 
         if (interaction.isButton()) {
           logger.info({ userId: interaction.user.id, customId: interaction.customId }, "[bui] Discord button interaction intercepted.");
-          await handlers.onInbound({
+          dispatchInbound({
             bridgeId: "discord",
             conversation: toConversation(interaction.channelId, interaction.channel?.isThread() ? interaction.channel.id : undefined),
             channel: toChannel({

@@ -75,6 +75,14 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
     },
     async start(nextHandlers) {
       handlers = nextHandlers;
+      const dispatchInbound = (envelope: Parameters<BridgeRuntimeHandlers["onInbound"]>[0]) => {
+        if (!handlers) {
+          return;
+        }
+        void handlers.onInbound(envelope).catch((error) => {
+          logger.error({ error, bridgeId: "telegram", eventType: envelope.event.type }, "[bui] Failed to process inbound telegram event.");
+        });
+      };
       if (started) {
         return;
       }
@@ -100,7 +108,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
 
         logger.info({ userId, username: ctx.from?.username, chatId: ctx.chat.id }, "[bui] Telegram text message intercepted.");
 
-        await handlers.onInbound(
+        dispatchInbound(
           buildTextInbound({
             chatId: ctx.chat.id,
             userId,
@@ -130,7 +138,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
           return;
         }
 
-        await handlers.onInbound({
+        dispatchInbound({
           bridgeId: "telegram",
           conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
           channel: { id: String(ctx.chat.id), kind: "dm" },
@@ -162,7 +170,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
           return;
         }
 
-        await handlers.onInbound({
+        dispatchInbound({
           bridgeId: "telegram",
           conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
           channel: { id: String(ctx.chat.id), kind: "dm" },
@@ -196,7 +204,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
           return;
         }
 
-        await handlers.onInbound({
+        dispatchInbound({
           bridgeId: "telegram",
           conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
           channel: { id: String(ctx.chat.id), kind: "dm" },
@@ -229,7 +237,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
           return;
         }
 
-        await handlers.onInbound({
+        dispatchInbound({
           bridgeId: "telegram",
           conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
           channel: { id: String(ctx.chat.id), kind: "dm" },
@@ -277,7 +285,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
           "[bui] Telegram callback intercepted.",
         );
         await safeAnswerCallbackQuery(ctx, "Processing...");
-        await handlers.onInbound({
+        dispatchInbound({
           bridgeId: "telegram",
           conversation: { bridgeId: "telegram", channelId: String(chatId) },
           channel: { id: String(chatId), kind: "dm" },
