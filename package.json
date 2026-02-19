@@ -20,7 +20,9 @@
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
     "test": "bunx vitest run",
-    "test:watch": "bunx vitest"
+    "test:watch": "bunx vitest",
+    "prepare": "husky",
+    "commitlint": "commitlint --from HEAD~1 --to HEAD"
   },
   "engines": {
     "bun": ">=1.3.9"
@@ -45,12 +47,15 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.4.2",
+    "@commitlint/config-conventional": "^20.4.2",
     "@types/node": "^22.12.0",
+    "drizzle-kit": "^0.31.5",
+    "husky": "^9.1.7",
     "oxfmt": "^0.6.0",
     "oxlint": "^0.18.0",
     "vite": "^5.4.11",
     "vite-tsconfig-paths": "^5.1.4",
-    "drizzle-kit": "^0.31.5",
     "vitest": "^2.1.8"
   }
 }
