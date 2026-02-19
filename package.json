@@ -5,12 +5,14 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "opencode-bui": "src/bin/opencode-bui.ts"
+    "opencode-bui": "src/bin/opencode-bui.ts",
+    "opencode-bui-plugin": "src/bin/opencode-bui-plugin.ts"
   },
   "scripts": {
     "dev": "bun --watch src/bin/opencode-bui.ts start",
     "dev:telegram": "bun --watch src/standalone-bot.ts",
     "start": "bun src/bin/opencode-bui.ts start",
+    "plugin:send": "bun src/bin/opencode-bui-plugin.ts send",
     "onboard": "bun src/bin/opencode-bui.ts onboard",
     "doctor": "bun src/bin/opencode-bui.ts doctor",
     "bridge:test": "bun src/bin/opencode-bui.ts bridge:test",

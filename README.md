@@ -104,6 +104,11 @@ Common environment variables:
 - `BUI_AGENT_BRIDGE_TOOLS` (optional, default `1`; injects bridge tool instructions so agent can request explicit attachments)
 - `BUI_OPENCODE_EAGER_START` (optional, default `1`; pre-warms OpenCode SDK context at runtime startup)
 - `BUI_TYPING_INDICATOR` (optional, default `1`; sends typing indicator while runs are active)
+- `BUI_PLUGIN_BRIDGE_SERVER` (optional, default `0`; enables plugin->bridge HTTP endpoint)
+- `BUI_PLUGIN_BRIDGE_HOST` (optional, default `127.0.0.1`)
+- `BUI_PLUGIN_BRIDGE_PORT` (optional, default `4499`)
+- `BUI_PLUGIN_BRIDGE_TOKEN` (optional, recommended for local auth)
+- `BUI_PLUGIN_BRIDGE_URL` (optional, plugin helper endpoint URL)
 - `BUI_LOG_TO_FILE` (optional, default `1`)
 - `BUI_LOG_FILE` (optional, default `./opencode-bui.log`)
 

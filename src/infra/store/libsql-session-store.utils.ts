@@ -32,6 +32,25 @@ export function createLibsqlSessionStore(database: BuiDb): SessionStore {
       };
     },
 
+    async getConversationBySessionId(sessionId: string): Promise<ConversationRef | undefined> {
+      const rows = await database.db
+        .select()
+        .from(conversationSessionsTable)
+        .where(eq(conversationSessionsTable.sessionId, sessionId))
+        .limit(1);
+
+      const row = rows[0];
+      if (!row) {
+        return undefined;
+      }
+
+      return {
+        bridgeId: row.bridgeId as ConversationRef["bridgeId"],
+        channelId: row.channelId,
+        ...(row.threadId ? { threadId: row.threadId } : {}),
+      };
+    },
+
     async setSessionForConversation(conversation: ConversationRef, sessionId: string, cwd?: string): Promise<void> {
       const key = conversationKey(conversation);
       const timestamp = nowIso();

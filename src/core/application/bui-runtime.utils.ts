@@ -19,6 +19,7 @@ import { AgentStoreService, ClockService, OpenCodeClientService, SessionStoreSer
 import type { InboundEnvelope } from "../domain/envelope.types.js";
 import { startAllBridges, stopAllBridges, waitForShutdownSignal } from "./bridge-supervisor.utils.js";
 import { bridgeDefinitionById } from "./bridge-registry.utils.js";
+import { z } from "zod";
 
 const nativeCommands = [
   { command: "start", description: "Show bot help" },
@@ -77,6 +78,87 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     resolve: (response: "once" | "always" | "reject") => void;
     timer: ReturnType<typeof setTimeout>;
   }>();
+
+  const pluginBridgePayloadSchema = z.object({
+    sessionId: z.string().min(1),
+    text: z.string().optional(),
+    attachments: z.array(z.object({
+      filePath: z.string().min(1),
+      kind: z.enum(["image", "audio", "video", "document"]).optional(),
+      caption: z.string().optional(),
+    })).optional(),
+  });
+
+  const pluginBridgeServerEnabled = process.env.BUI_PLUGIN_BRIDGE_SERVER === "1";
+  const pluginBridgeHost = process.env.BUI_PLUGIN_BRIDGE_HOST?.trim() || "127.0.0.1";
+  const pluginBridgePortRaw = Number.parseInt(process.env.BUI_PLUGIN_BRIDGE_PORT || "4499", 10);
+  const pluginBridgePort = Number.isFinite(pluginBridgePortRaw) && pluginBridgePortRaw > 0 ? pluginBridgePortRaw : 4499;
+  const pluginBridgeToken = process.env.BUI_PLUGIN_BRIDGE_TOKEN?.trim();
+  let pluginBridgeServer: { stop: (closeActiveConnections?: boolean) => void } | undefined;
+  const bunRuntime = (globalThis as { Bun?: { serve: (input: { hostname: string; port: number; fetch: (request: Request) => Promise<Response> | Response }) => { stop: (closeActiveConnections?: boolean) => void } } }).Bun;
+
+  if (pluginBridgeServerEnabled && bunRuntime) {
+    pluginBridgeServer = bunRuntime.serve({
+      hostname: pluginBridgeHost,
+      port: pluginBridgePort,
+      fetch: async (request: Request) => {
+        if (request.method === "GET") {
+          return new Response("ok", { status: 200 });
+        }
+        if (request.method !== "POST") {
+          return new Response("method not allowed", { status: 405 });
+        }
+        if (new URL(request.url).pathname !== "/v1/plugin/send") {
+          return new Response("not found", { status: 404 });
+        }
+
+        const authHeader = request.headers.get("x-bui-token")?.trim();
+        if (pluginBridgeToken && authHeader !== pluginBridgeToken) {
+          return new Response("unauthorized", { status: 401 });
+        }
+
+        let body: unknown;
+        try {
+          body = await request.json();
+        } catch {
+          return new Response("invalid json", { status: 400 });
+        }
+        const parsed = pluginBridgePayloadSchema.safeParse(body);
+        if (!parsed.success) {
+          return new Response("invalid payload", { status: 400 });
+        }
+
+        const conversation = await sessionStore.getConversationBySessionId(parsed.data.sessionId);
+        if (!conversation) {
+          return new Response("session not mapped to bridge conversation", { status: 404 });
+        }
+        const bridge = input.bridges.find((item) => item.id === conversation.bridgeId);
+        if (!bridge) {
+          return new Response("bridge not available", { status: 404 });
+        }
+
+        await bridge.send({
+          bridgeId: bridge.id,
+          conversation,
+          ...(parsed.data.text ? { text: parsed.data.text } : {}),
+          ...(parsed.data.attachments
+            ? {
+              attachments: parsed.data.attachments.map((entry) => ({
+                filePath: entry.filePath,
+                kind: entry.kind || "document",
+                ...(entry.caption ? { caption: entry.caption } : {}),
+              })),
+            }
+            : {}),
+        });
+
+        return new Response("ok", { status: 200 });
+      },
+    });
+    logger.info({ host: pluginBridgeHost, port: pluginBridgePort, tokenRequired: Boolean(pluginBridgeToken) }, "[bui] Plugin bridge server started.");
+  } else if (pluginBridgeServerEnabled) {
+    logger.warn("[bui] Plugin bridge server requested but Bun runtime API is unavailable.");
+  }
 
   const isInterruptEvent = (envelope: InboundEnvelope): boolean => {
     if (envelope.event.type === "slash") {
@@ -888,6 +970,10 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     await waitForShutdownSignal();
   } finally {
     logger.info("[bui] Shutdown signal received. Stopping bridges.");
+    if (pluginBridgeServer) {
+      pluginBridgeServer.stop(true);
+      logger.info("[bui] Plugin bridge server stopped.");
+    }
     await stopAllBridges(input.bridges);
     logger.info("[bui] Runtime stopped.");
   }

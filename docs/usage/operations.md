@@ -70,6 +70,20 @@ Bridge command registration includes native BUI commands plus command markdown f
 - This enables a hybrid mode where BUI uses OpenCode server-side context/plugins while keeping bridge orchestration in BUI.
 - Default is off; when `OPENCODE_ATTACH_URL` is unset, BUI starts an embedded OpenCode SDK server for local runs.
 
+## Plugin + bridge mode
+
+- Enable bridge endpoint with `BUI_PLUGIN_BRIDGE_SERVER=1`.
+- Default endpoint: `http://127.0.0.1:4499/v1/plugin/send`.
+- Optional auth: set `BUI_PLUGIN_BRIDGE_TOKEN` and send it as `x-bui-token` header.
+- Plugin helper command:
+  - `opencode-bui-plugin send --session <sessionId> --text "..."`
+  - `opencode-bui-plugin send --session <sessionId> --file /path/to/file --caption "..."`
+
+Session visibility note:
+
+- If BUI runs with embedded OpenCode (`OPENCODE_ATTACH_URL` unset), sessions may not appear in the TUI instance you are using.
+- Use `OPENCODE_ATTACH_URL` to point BUI at the same OpenCode server used by TUI when you want shared `/sessions` visibility.
+
 ## Attachment safety limits
 
 - `BUI_MAX_ATTACHMENTS_PER_MESSAGE` (default `6`) limits outbound attachment count per message.
