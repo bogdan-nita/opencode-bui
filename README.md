@@ -1,163 +1,69 @@
 # OpenCode BUI
 
-OpenCode BUI (Bot User Interface) is a standalone CLI application that exposes OpenCode sessions through bot bridges.
+OpenCode BUI (Bot User Interface) is a Bun-first standalone runtime that exposes OpenCode sessions through bridge adapters.
 
-Current bridges: Telegram and Discord (enable per config).
+It currently supports Telegram and Discord bridges (enabled per config).
 
-## Why standalone
+## Highlights
 
-- Independent lifecycle from OpenCode plugin reloads.
-- Better hot reload and operational diagnostics.
-- Foundation for multiple frontends (Telegram now, Discord next).
+- Bridge-agnostic core runtime (`src/core/application`) with bridge-owned behavior contracts.
+- One Telegram chat maps to one OpenCode session for predictable conversational context.
+- Slash parity: unknown slash commands are forwarded to OpenCode (`/help`, `/init`, `/undo`, `/redo`, and more).
+- BUI-native operations: `/new`, `/cd`, `/cwd`, `/session`, `/screenshot`, `/reload`, `/pid`, `/health`, `/agent ...`.
+- Local-first runtime with LibSQL + Drizzle storage and configurable runtime directories.
+- Offline backlog handling and media forwarding support.
 
-## Features
+## Getting Started
 
-- One Telegram chat maps to one OpenCode session.
-- Slash parity: forwards unknown slash commands to OpenCode (`/help`, `/init`, `/undo`, `/redo`, ...).
-- BUI-native commands:
-  - `/new [path]`
-  - `/cd <path>`
-  - `/cwd`
-  - `/session`
-  - `/screenshot [note]`
-  - `/reload`
-  - `/pid`
-  - `/health`
-  - `/agent list | new | run`
-- Offline backlog resolution (`all`, `latest`, override with fresh message).
-- Screenshot capture + Telegram send + OpenCode analysis.
-- Local image ingestion and forwarding.
+### Prerequisites
 
-## Stack
+- Bun `>= 1.3.9` (`.bun-version` is included).
+- OpenCode CLI available on your machine (`opencode` in `PATH`, or set `OPENCODE_BIN`).
+- A bot token for your enabled bridge(s).
 
-- TypeScript (Bun runtime)
-- Bun runtime for local execution (`bun --watch`, `bun run`)
-- `grammy` for Telegram
-- `cac` for CLI
-- `c12` + `defu` for layered config loading/merging
-- `effect` for core runtime orchestration
-- `@opencode-ai/sdk` for OpenCode session/runtime integration
-- `@libsql/client` + `drizzle-orm` for local LibSQL storage
-- `pino` + `pino-pretty` for structured logs with pretty local output
-- `vite` / `vitest` for tooling and tests
-- `zod` for runtime configuration validation
-- `vitest` for unit tests
-- `oxlint` + `oxfmt` for linting/formatting
-
-## Project layout
-
-- `src/bin/opencode-bui.ts`: CLI entrypoint
-- `src/core/domain/*`: bridge-agnostic contracts and schemas
-- `src/core/ports/*`: interfaces only
-- `src/core/application/*`: runtime orchestration and routers
-- `src/infra/*`: config loader, LibSQL stores, lock, OpenCode adapter
-- `src/bridges/telegram/*`: Telegram SDK edge adapter
-- `src/bridges/discord/*`: Discord SDK edge adapter scaffold
-- `test/*`: unit tests
-
-Bridge modules own bridge-specific behavior through definitions (config validation rules, onboarding prompts/template blocks, and health checks), while core stays bridge-agnostic.
-
-File naming convention uses: `*.schema.ts`, `*.types.ts`, `*.utils.ts`, `*.test.ts`.
-
-Database policy:
-
-- If local LibSQL is introduced, use Drizzle ORM as the integration layer.
-
-Import aliases are available:
-
-- `@bin/*`
-- `@core/*`
-- `@infra/*`
-- `@bridges/*`
-
-## Install
-
-Use Bun (this is a Bun-first application):
-
-```bash
-bun --version
-```
-
-Minimum supported Bun version: `1.3.9` (see `.bun-version`).
+### Installation
 
 ```bash
 bun install
 ```
 
-`opencode-bui` runs TypeScript directly on Bun (no `tsc` compile step required for normal usage).
-Use `bun run build` only if you want a bundled output in `dist/bin`.
+### Quick Start
 
-Optional global command on your machine:
+1. Configure environment (recommended location: `~/.config/opencode/bui/.env`).
+2. Run onboarding:
 
 ```bash
-bun link
+bun run onboard
 ```
 
-Then run:
+3. Start runtime:
 
 ```bash
 bun run start
 ```
 
-## Development
+Optional local binary link:
 
 ```bash
-bun run dev
+bun link
 ```
 
-This runs the CLI with Bun watch mode.
-
-Standalone Telegram bridge dev entry:
+Then use:
 
 ```bash
-bun run dev:telegram
+opencode-bui start
 ```
 
-Diagnostics:
+## Configuration
 
-```bash
-bun run doctor
-bun run bridge:test
-```
-
-Lint and format:
-
-```bash
-bun run lint
-bun run format
-```
-
-Database migrations:
-
-```bash
-bun run db:generate
-bun run db:migrate
-```
-
-Onboarding wizard:
-
-```bash
-opencode-bui onboard
-```
-
-## Tests
-
-```bash
-bun run test
-```
-
-## Environment
-
-`opencode-bui` resolves config in this order:
+Configuration precedence:
 
 1. nearest working directory config (`opencode-bui.config.*`)
 2. nearest OpenCode config directory (`opencode.json`) and its `bui/` folder
 3. global `~/.config/opencode/bui`
-4. environment overrides
+4. environment variables (highest precedence)
 
-Use `~/.config/opencode/bui/.env` (preferred) or project `.env`.
-
-You can also define typed app config with `c12`, for example `opencode-bui.config.ts`:
+Example `opencode-bui.config.ts`:
 
 ```ts
 export default {
@@ -180,25 +86,88 @@ export default {
 }
 ```
 
-Environment variables still override config file values.
-
-Key variables:
+Common environment variables:
 
 - `TELEGRAM_BOT_TOKEN` (required when `bridges.telegram.enabled=true`)
 - `TELEGRAM_ALLOWED_USERS` (optional, comma-separated usernames and/or numeric IDs)
-- `TELEGRAM_ALLOWED_USER_IDS` (optional, legacy comma-separated numeric IDs)
 - `DISCORD_BOT_TOKEN` (required when `bridges.discord.enabled=true`)
 - `DISCORD_APPLICATION_ID` (optional)
 - `OPENCODE_BIN` (optional, default `opencode`)
-- `OPENCODE_ATTACH_URL` (optional, attach all runs to an existing OpenCode server URL)
+- `OPENCODE_ATTACH_URL` (optional)
 - `BUI_RUNTIME_DIR` (optional, default `~/.config/opencode/bui`)
-- `BUI_DB_PATH` (optional, default `opencode-bui.db` next to resolved `opencode-bui.config.*`; falls back to runtime dir)
-- `BUI_UPLOAD_DIR` (optional)
-- `BUI_LOCK_PATH` (optional)
-- `TELEGRAM_BACKLOG_STALE_SECONDS` (optional, default `45`)
-- `TELEGRAM_BACKLOG_BATCH_WINDOW_MS` (optional, default `1200`)
-- `TELEGRAM_STT_COMMAND` (optional)
-- `TELEGRAM_STT_TIMEOUT_MS` (optional, default `120000`)
+- `BUI_DB_PATH` (optional)
 
-The runtime database is `~/.config/opencode/bui/opencode-bui.db` by default.
-If a `opencode-bui.config.*` file is discovered in a `bui/` directory, `opencode-bui.db` is created next to that config by default.
+## Development
+
+Run in watch mode:
+
+```bash
+bun run dev
+```
+
+Standalone Telegram bridge dev entry:
+
+```bash
+bun run dev:telegram
+```
+
+Diagnostics:
+
+```bash
+bun run doctor
+bun run bridge:test
+```
+
+Database migrations:
+
+```bash
+bun run db:generate
+bun run db:migrate
+```
+
+## Quality Gates
+
+```bash
+bun run lint
+bun run test
+bun run build
+```
+
+## Project Structure
+
+- `src/bin/opencode-bui.ts`: CLI entrypoint
+- `src/core/domain/*`: shared bridge-agnostic contracts and schemas
+- `src/core/ports/*`: interfaces/ports
+- `src/core/application/*`: runtime orchestration and routing
+- `src/infra/*`: config, storage, lock services, OpenCode adapters
+- `src/bridges/telegram/*`: Telegram bridge implementation
+- `src/bridges/discord/*`: Discord bridge implementation
+- `docs/*`: architecture, usage, and contribution guides
+
+Naming conventions:
+
+- `*.schema.ts`
+- `*.types.ts`
+- `*.utils.ts`
+- `*.test.ts`
+
+## Documentation
+
+- `docs/README.md`
+- `docs/architecture/README.md`
+- `docs/usage/README.md`
+- `docs/contribution/README.md`
+
+## Contributing
+
+Contributions are welcome. Please read:
+
+- `AGENTS.md` for engineering constraints and architecture boundaries
+- `docs/contribution/guidelines.md`
+- `docs/contribution/agent-workflow.md`
+
+Open an issue for bugs or feature proposals before larger changes.
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE`.
