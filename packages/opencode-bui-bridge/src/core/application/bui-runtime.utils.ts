@@ -168,11 +168,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const parsePermissionResponseFromText = (
     envelope: InboundEnvelope,
   ): { permissionId: string; response: "once" | "always" | "reject" } | undefined => {
-    const slash = envelope.event.type === "slash"
-      ? { command: envelope.event.command, args: envelope.event.args }
-      : envelope.event.type === "text"
-        ? splitCommand(envelope.event.text)
-        : undefined;
+    const slash = parseSlashCommand(envelope);
     if (!slash) {
       return undefined;
     }
@@ -189,11 +185,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   };
 
   const parseSlashCommand = (envelope: InboundEnvelope): { command: string; args: string } | undefined => {
+    const normalizeCommand = (commandRaw: string): string => commandRaw.toLowerCase().split("@", 1)[0] || "";
+
     if (envelope.event.type === "slash") {
-      return { command: envelope.event.command, args: envelope.event.args };
+      return { command: normalizeCommand(envelope.event.command), args: envelope.event.args };
     }
     if (envelope.event.type === "text" && envelope.event.text.trim().startsWith("/")) {
-      return splitCommand(envelope.event.text);
+      const parsed = splitCommand(envelope.event.text);
+      return { command: normalizeCommand(parsed.command), args: parsed.args };
     }
     return undefined;
   };
@@ -253,13 +252,33 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     let stopTyping: (() => Promise<void> | void) | undefined;
 
     const typingEnabled = process.env.BUI_TYPING_INDICATOR !== "0";
-    if (typingEnabled && bridge.beginTyping) {
+    const startTypingIndicator = async () => {
+      if (!typingEnabled || !bridge.beginTyping || stopTyping) {
+        return;
+      }
       try {
         stopTyping = await bridge.beginTyping(envelope.conversation);
+        logger.info({ bridgeId: envelope.bridgeId, conversation: key }, "[bui] Typing indicator started.");
       } catch (error) {
         logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to start typing indicator.");
       }
-    }
+    };
+
+    const stopTypingIndicator = async () => {
+      if (!stopTyping) {
+        return;
+      }
+      try {
+        await stopTyping();
+        logger.info({ bridgeId: envelope.bridgeId, conversation: key }, "[bui] Typing indicator stopped.");
+      } catch (error) {
+        logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to stop typing indicator.");
+      } finally {
+        stopTyping = undefined;
+      }
+    };
+
+    await startTypingIndicator();
 
     const renderActivityText = (): string => {
       const recent = activityLines.slice(-activityRetainLines);
@@ -335,6 +354,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       },
       onPermissionRequest: async (permission) => {
         logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, type: permission.type }, "[bui] Permission request received from OpenCode.");
+        await stopTypingIndicator();
         const expiresAtUnixSeconds = Math.floor(Date.now() / 1000) + Math.ceil(permissionTimeoutMs / 1000);
         await permissionStore.createPending({
           permissionId: permission.id,
@@ -400,6 +420,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
                 { bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, response },
                 "[bui] Resolving pending permission response.",
               );
+              void startTypingIndicator();
               resolvePermission(response);
             },
             timer,
@@ -487,13 +508,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       });
       return;
     } finally {
-      if (stopTyping) {
-        try {
-          await stopTyping();
-        } catch (error) {
-          logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to stop typing indicator.");
-        }
-      }
+      await stopTypingIndicator();
       const active = activeRuns.get(key);
       if (active === controller) {
         activeRuns.delete(key);
@@ -841,6 +856,16 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
         if (permissionFromText) {
           logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permissionFromText.permissionId, response: permissionFromText.response }, "[bui] Permission response received from text command.");
           await resolvePermissionDecision(bridge, envelope, key, permissionFromText.permissionId, permissionFromText.response);
+          return;
+        }
+
+        if (slash?.command === "permit" || slash?.command === "permission") {
+          await bridge.send({
+            bridgeId: envelope.bridgeId,
+            conversation: envelope.conversation,
+            text: "Usage: /permit <once|always|reject> <permissionId>",
+          });
+          logger.warn({ bridgeId: envelope.bridgeId, conversation: key, args: slash.args }, "[bui] Invalid permit command format.");
           return;
         }
 

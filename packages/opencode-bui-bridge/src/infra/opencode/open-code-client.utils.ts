@@ -27,7 +27,7 @@ type BridgeAttachmentDirective = {
 };
 
 function shouldInjectBridgeToolPrompt(): boolean {
-  return process.env.BUI_AGENT_BRIDGE_TOOLS !== "0";
+  return process.env.BUI_AGENT_BRIDGE_TOOLS === "1";
 }
 
 function stripQuotes(value: string): string {
