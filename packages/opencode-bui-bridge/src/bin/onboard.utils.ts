@@ -121,7 +121,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "BUI_PLUGIN_BRIDGE_PORT=4499",
     "BUI_PLUGIN_BRIDGE_TOKEN=",
     "BUI_PLUGIN_BRIDGE_DISCOVERY=",
-    "BUI_PLUGIN_BRIDGE_URL=http://127.0.0.1:4499/v1/plugin/send",
+    "BUI_PLUGIN_BRIDGE_URL=http://127.0.0.1:4499",
     "BUI_BRIDGE_BOOT_COMMAND=",
     "BUI_DEV_HOT_RELOAD=0",
     "BUI_PLUGIN_HOT_RELOAD=0",
@@ -150,13 +150,13 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "# OpenCode BUI plugin integration",
     `BUI_PLUGIN_DISCOVERY=${resolve(targetRoot, "plugin-bridge.discovery.json")}`,
     "# Optional explicit override",
-    "# BUI_PLUGIN_BRIDGE_URL=http://127.0.0.1:4499/v1/plugin/send",
+    "# BUI_PLUGIN_BRIDGE_URL=http://127.0.0.1:4499",
     "# BUI_PLUGIN_BRIDGE_TOKEN=",
     "",
   ].join("\n");
 
   const pluginFileTemplate = [
-    "import { OpenCodeBuiPlugin } from \"opencode-bui\";",
+    "import { OpenCodeBuiPlugin } from \"opencode-bui-plugin\";",
     "",
     "export const BuiBridgePlugin = OpenCodeBuiPlugin;",
     "",

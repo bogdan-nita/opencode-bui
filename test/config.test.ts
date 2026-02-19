@@ -10,7 +10,7 @@ import {
   readRuntimeConfig,
   resetRuntimeConfigCache,
   resolvePaths,
-} from "../src/core/config.js";
+} from "../packages/opencode-bui-bridge/src/core/config.js";
 
 describe("config", () => {
   let tempDir = "";

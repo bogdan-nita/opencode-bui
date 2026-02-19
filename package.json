@@ -1,27 +1,26 @@
 {
   "name": "opencode-bui",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "license": "MIT",
   "type": "module",
-  "main": "src/plugin/index.js",
-  "exports": {
-    ".": "./src/plugin/index.js",
-    "./plugin": "./src/plugin/index.js"
-  },
+  "workspaces": [
+    "packages/opencode-bui-bridge",
+    "packages/opencode-bui-plugin"
+  ],
   "bin": {
-    "opencode-bui": "src/bin/opencode-bui.ts"
+    "opencode-bui-bridge": "packages/opencode-bui-bridge/src/bin/opencode-bui.ts"
   },
   "scripts": {
-    "dev": "bun --watch src/bin/opencode-bui.ts start",
-    "dev:telegram": "bun --watch src/standalone-bot.ts",
-    "start": "bun src/bin/opencode-bui.ts start",
-    "start:bridge": "bun src/bin/opencode-bui.ts start",
-    "onboard": "bun src/bin/opencode-bui.ts onboard",
-    "doctor": "bun src/bin/opencode-bui.ts doctor",
-    "bridge:test": "bun src/bin/opencode-bui.ts bridge:test",
-    "build": "bun build src/bin/opencode-bui.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
-    "lint": "bunx oxlint src test",
+    "dev": "bun --watch packages/opencode-bui-bridge/src/bin/opencode-bui.ts start",
+    "dev:telegram": "bun --watch packages/opencode-bui-bridge/src/standalone-bot.ts",
+    "start": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts start",
+    "start:bridge": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts start",
+    "onboard": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts onboard",
+    "doctor": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts doctor",
+    "bridge:test": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts bridge:test",
+    "build": "bun build packages/opencode-bui-bridge/src/bin/opencode-bui.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
+    "lint": "bunx oxlint packages test",
     "format": "bunx oxfmt --config .oxfmt.json .",
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
@@ -38,6 +37,8 @@
     "@libsql/client": "^0.14.0",
     "@opencode-ai/plugin": "^1.2.6",
     "@opencode-ai/sdk": "^1.2.6",
+    "@orpc/client": "^1.13.5",
+    "@orpc/server": "^1.13.5",
     "c12": "^3.1.0",
     "cac": "^6.7.14",
     "date-fns": "^4.1.0",

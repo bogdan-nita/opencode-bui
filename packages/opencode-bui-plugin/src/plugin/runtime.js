@@ -63,9 +63,9 @@ function bootBridgeCommand() {
     return explicit;
   }
   if (process.env.BUI_DEV_HOT_RELOAD === "1") {
-    return "bun --watch src/bin/opencode-bui.ts start";
+    return "bun --watch packages/opencode-bui-bridge/src/bin/opencode-bui.ts start";
   }
-  return "opencode-bui start";
+  return "opencode-bui-bridge start";
 }
 
 export function spawnBridgeBoot() {
@@ -114,11 +114,7 @@ export async function sendToBridge(args, context) {
       : {}),
   };
 
-  const response = await client.v1.plugin.send.$post({ json: payload });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`bui_send failed (${response.status}): ${body}`);
-  }
+  await client.plugin.send(payload);
 
   return "Sent to BUI bridge.";
 }

@@ -6,7 +6,7 @@ It currently supports Telegram and Discord bridges (enabled per config).
 
 ## Highlights
 
-- Bridge-agnostic core runtime (`src/core/application`) with bridge-owned behavior contracts.
+- Bridge-agnostic core runtime (`packages/opencode-bui-bridge/src/core/application`) with bridge-owned behavior contracts.
 - One Telegram chat maps to one OpenCode session for predictable conversational context.
 - Slash parity: unknown slash commands are forwarded to OpenCode (`/help`, `/init`, `/undo`, `/redo`, and more).
 - BUI-native operations: `/new`, `/cd`, `/cwd`, `/session`, `/screenshot`, `/reload`, `/pid`, `/health`, `/agent ...`.
@@ -46,8 +46,8 @@ bun run start
 Alternative (bunx-style CLI):
 
 ```bash
-bunx opencode-bui onboard
-bunx opencode-bui start
+bunx opencode-bui-bridge onboard
+bunx opencode-bui-bridge start
 ```
 
 Bridge CLI:
@@ -60,7 +60,7 @@ OpenCode plugin registration (global example):
 
 ```js
 // ~/.config/opencode/plugins/opencode-bui-plugin.js
-import { OpenCodeBuiPlugin } from "opencode-bui"
+import { OpenCodeBuiPlugin } from "opencode-bui-plugin"
 
 export const BuiBridgePlugin = OpenCodeBuiPlugin
 ```
@@ -79,7 +79,7 @@ bun link
 Then use:
 
 ```bash
-opencode-bui start
+opencode-bui-bridge start
 ```
 
 ## Configuration
@@ -181,11 +181,11 @@ bun run build
 
 ## Project Structure
 
-- `src/bin/*`: bridge CLI and onboarding
-- `src/core/*`: runtime domain, ports, and orchestration
-- `src/infra/*`: config, storage, db, lock, OpenCode adapter and plugin bridge API
-- `src/bridges/*`: Telegram/Discord bridge adapters
-- `src/plugin/*`: OpenCode plugin module exports and tool definitions
+- `packages/opencode-bui-bridge/src/bin/*`: bridge CLI and onboarding
+- `packages/opencode-bui-bridge/src/core/*`: runtime domain, ports, and orchestration
+- `packages/opencode-bui-bridge/src/infra/*`: config, storage, db, lock, OpenCode adapter and plugin bridge API
+- `packages/opencode-bui-bridge/src/bridges/*`: Telegram/Discord bridge adapters
+- `packages/opencode-bui-plugin/src/plugin/*`: OpenCode plugin module exports and tool definitions
 - `docs/*`: architecture, usage, and contribution guides
 
 Naming conventions:

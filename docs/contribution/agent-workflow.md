@@ -8,7 +8,7 @@ This project is designed to be maintained with autonomous coding agents.
 - Avoid bridge-type branching in core orchestration.
 - Keep files in the project naming style: `*.schema.ts`, `*.types.ts`, `*.utils.ts`, `*.test.ts`.
 - Use Zod for external and unknown input parsing.
-- Prefer Bun runtime APIs and shared runtime helpers in `src/infra/runtime/`.
+- Prefer Bun runtime APIs and shared runtime helpers in `packages/opencode-bui-bridge/src/infra/runtime/`.
 
 ## Agent maintenance loop
 
@@ -20,7 +20,7 @@ This project is designed to be maintained with autonomous coding agents.
 
 ## Where to change what
 
-- New bridge behavior: `src/bridges/<bridge>/`.
-- Shared policy: `src/core/application/`.
-- Config and validation: `src/infra/config/`.
-- Storage: `src/infra/db/` and `src/infra/store/`.
+- New bridge behavior: `packages/opencode-bui-bridge/src/bridges/<bridge>/`.
+- Shared policy: `packages/opencode-bui-bridge/src/core/application/`.
+- Config and validation: `packages/opencode-bui-bridge/src/infra/config/`.
+- Storage: `packages/opencode-bui-bridge/src/infra/db/` and `packages/opencode-bui-bridge/src/infra/store/`.

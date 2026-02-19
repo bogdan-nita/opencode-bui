@@ -20,7 +20,7 @@ import { ensureDir, fileExists } from "@infra/runtime/runtime-fs.utils.js";
 import { resolve } from "node:path";
 import { logger } from "@infra/runtime/logger.utils.js";
 
-const cli = cac("opencode-bui");
+const cli = cac("opencode-bui-bridge");
 
 async function withCliErrors(task: () => Promise<void>): Promise<void> {
   try {
@@ -219,9 +219,9 @@ cli.command("doctor", "Show runtime diagnostics").action(async () => {
       `- OpenCode eager start: ${process.env.BUI_OPENCODE_EAGER_START === "0" ? "disabled" : "enabled"}`,
       `- Typing indicator: ${process.env.BUI_TYPING_INDICATOR === "0" ? "disabled" : "enabled"}`,
       `- Plugin bridge server: ${process.env.BUI_PLUGIN_BRIDGE_SERVER === "1" ? "enabled" : "disabled"}`,
-      `- Plugin bridge endpoint: http://${process.env.BUI_PLUGIN_BRIDGE_HOST || "127.0.0.1"}:${process.env.BUI_PLUGIN_BRIDGE_PORT || "4499"}/v1/plugin/send`,
+      `- Plugin bridge endpoint: http://${process.env.BUI_PLUGIN_BRIDGE_HOST || "127.0.0.1"}:${process.env.BUI_PLUGIN_BRIDGE_PORT || "4499"}`,
       `- Plugin bridge discovery: ${process.env.BUI_PLUGIN_BRIDGE_DISCOVERY || `${cfg.paths.runtimeDir}/plugin-bridge.discovery.json`}`,
-      `- Bridge boot command: ${process.env.BUI_BRIDGE_BOOT_COMMAND || "opencode-bui start"}`,
+      `- Bridge boot command: ${process.env.BUI_BRIDGE_BOOT_COMMAND || "opencode-bui-bridge start"}`,
       `- Dev bridge hot reload: ${process.env.BUI_DEV_HOT_RELOAD === "1" ? "enabled" : "disabled"}`,
       `- Plugin hot reload: ${process.env.BUI_PLUGIN_HOT_RELOAD === "1" ? "enabled" : "disabled"}`,
       `- File logging enabled: ${process.env.BUI_LOG_TO_FILE === "0" ? "no" : "yes"}`,

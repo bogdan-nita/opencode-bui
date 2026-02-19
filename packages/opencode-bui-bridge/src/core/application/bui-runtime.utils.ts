@@ -22,7 +22,7 @@ import { bridgeDefinitionById } from "./bridge-registry.utils.js";
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import { writePluginBridgeDiscovery } from "@infra/plugin-bridge/discovery.utils.js";
-import { createPluginBridgeApp } from "@infra/plugin-bridge/api.utils.js";
+import { createPluginBridgeHandler } from "@infra/plugin-bridge/api.utils.js";
 
 const nativeCommands = [
   { command: "start", description: "Show bot help" },
@@ -96,7 +96,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const bunRuntime = (globalThis as { Bun?: { serve: (input: { hostname: string; port: number; fetch: (request: Request) => Promise<Response> | Response }) => { stop: (closeActiveConnections?: boolean) => void } } }).Bun;
 
   if (pluginBridgeServerEnabled && bunRuntime) {
-    const app = createPluginBridgeApp({
+    const bridgeHandler = createPluginBridgeHandler({
       token: pluginBridgeToken,
       onSend: async (payload) => {
         const conversation = await sessionStore.getConversationBySessionId(payload.sessionId);
@@ -134,9 +134,12 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     pluginBridgeServer = bunRuntime.serve({
       hostname: pluginBridgeHost,
       port: pluginBridgePort,
-      fetch: app.fetch,
+      fetch: async (request: Request) => {
+        const response = await bridgeHandler.handle(request);
+        return response || new Response("not found", { status: 404 });
+      },
     });
-    const pluginBridgeUrl = `http://${pluginBridgeHost}:${pluginBridgePort}/v1/plugin/send`;
+    const pluginBridgeUrl = `http://${pluginBridgeHost}:${pluginBridgePort}`;
     await writePluginBridgeDiscovery(pluginDiscoveryPath, {
       url: pluginBridgeUrl,
       token: pluginBridgeToken,
