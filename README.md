@@ -72,6 +72,7 @@ export default {
   dbPath: "~/.config/opencode/bui/opencode-bui.db",
   opencodeBin: "opencode",
   opencodeAttachUrl: process.env.OPENCODE_ATTACH_URL || undefined,
+  sessionIdleTimeoutSeconds: 900,
   bridges: {
     telegram: {
       enabled: true,
@@ -95,10 +96,13 @@ Common environment variables:
 - `DISCORD_APPLICATION_ID` (optional)
 - `OPENCODE_BIN` (optional, default `opencode`)
 - `OPENCODE_ATTACH_URL` (optional)
+- `BUI_SESSION_IDLE_TIMEOUT_SECONDS` (optional, default `900`)
 - `BUI_RUNTIME_DIR` (optional, default `~/.config/opencode/bui`)
 - `BUI_DB_PATH` (optional)
 - `BUI_MAX_ATTACHMENTS_PER_MESSAGE` (optional, default `6`)
 - `BUI_MAX_ATTACHMENT_BYTES` (optional, default `10485760`)
+- `BUI_LOG_TO_FILE` (optional, default `1`)
+- `BUI_LOG_FILE` (optional, default `./opencode-bui.log`)
 
 ## Development
 

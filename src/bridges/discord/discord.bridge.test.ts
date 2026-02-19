@@ -5,6 +5,7 @@ import { registerDiscordCommands } from "./discord.bridge.js";
 function createConfig(): RuntimeConfig {
   return {
     opencodeBin: "opencode",
+    sessionIdleTimeoutSeconds: 900,
     paths: {
       runtimeDir: "/tmp/runtime",
       dbPath: "/tmp/runtime/opencode-bui.db",

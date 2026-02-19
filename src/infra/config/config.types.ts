@@ -17,6 +17,7 @@ export type BuiPaths = {
 export type RuntimeConfig = {
   opencodeBin: string;
   opencodeAttachUrl?: string;
+  sessionIdleTimeoutSeconds: number;
   paths: BuiPaths;
   bridges: {
     telegram: {

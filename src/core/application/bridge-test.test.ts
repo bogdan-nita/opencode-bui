@@ -5,6 +5,7 @@ import type { RuntimeConfig } from "@infra/config/config.types.js";
 function baseConfig(): RuntimeConfig {
   return {
     opencodeBin: "opencode",
+    sessionIdleTimeoutSeconds: 900,
     paths: {
       runtimeDir: "/tmp/bui",
       dbPath: "/tmp/bui/opencode-bui.db",

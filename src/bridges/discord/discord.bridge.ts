@@ -10,6 +10,7 @@ import {
   REST,
   Routes,
   SlashCommandBuilder,
+  type Message,
   type TextBasedChannel,
 } from "discord.js";
 import type { RuntimeConfig } from "@infra/config/config.types.js";
@@ -286,6 +287,25 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
         };
         await channel.send(payload);
       }
+    },
+    async upsertActivityMessage(input) {
+      const channel = await client.channels.fetch(input.conversation.channelId);
+      if (!channel || !channel.isTextBased() || !("send" in channel) || typeof channel.send !== "function") {
+        throw new Error(`Discord channel not found or not text-based: ${input.conversation.channelId}`);
+      }
+
+      if (input.token) {
+        try {
+          const existing = await channel.messages.fetch(input.token);
+          await existing.edit({ content: input.text });
+          return existing.id;
+        } catch {
+          // Fallback to posting a new message.
+        }
+      }
+
+      const sent = await channel.send({ content: input.text });
+      return (sent as Message).id;
     },
     async downloadMedia(envelope) {
       const response = await fetch(envelope.event.fileId);

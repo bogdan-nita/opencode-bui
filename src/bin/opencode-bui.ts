@@ -214,6 +214,9 @@ cli.command("doctor", "Show runtime diagnostics").action(async () => {
       `- Discord token configured: ${cfg.bridges.discord.token ? "yes" : "no"}`,
       `- OpenCode binary: ${cfg.opencodeBin}`,
       `- OpenCode attach URL: ${cfg.opencodeAttachUrl || "not set"}`,
+      `- Session idle timeout: ${cfg.sessionIdleTimeoutSeconds}s`,
+      `- File logging enabled: ${process.env.BUI_LOG_TO_FILE === "0" ? "no" : "yes"}`,
+      `- Log file path: ${process.env.BUI_LOG_FILE || `${process.cwd()}/opencode-bui.log`}`,
     ];
     logger.info(lines.join("\n"));
   });

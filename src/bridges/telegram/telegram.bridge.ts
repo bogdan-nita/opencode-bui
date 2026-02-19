@@ -65,7 +65,7 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
       buttons: true,
       mediaUpload: true,
       mediaDownload: true,
-      messageEdit: false,
+      messageEdit: true,
       threads: false,
       markdown: "limited",
     },
@@ -308,6 +308,31 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
     },
     async send(envelope: OutboundEnvelope) {
       await sendOutboundViaTelegram(bot, envelope, config.bridges.telegram.formatting.maxChunkChars);
+    },
+    async upsertActivityMessage(input) {
+      const chatId = Number.parseInt(input.conversation.channelId, 10);
+      if (!Number.isFinite(chatId)) {
+        throw new Error(`Invalid Telegram chat id: ${input.conversation.channelId}`);
+      }
+
+      if (input.token) {
+        const messageId = Number.parseInt(input.token, 10);
+        if (Number.isFinite(messageId)) {
+          try {
+            await bot.api.editMessageText(chatId, messageId, input.text, {
+              link_preview_options: { is_disabled: true },
+            });
+            return String(messageId);
+          } catch (error) {
+            logger.warn({ error, chatId, messageId }, "[bui] Failed to edit activity message, posting a new one.");
+          }
+        }
+      }
+
+      const sent = await bot.api.sendMessage(chatId, input.text, {
+        link_preview_options: { is_disabled: true },
+      });
+      return String(sent.message_id);
     },
     async downloadMedia(envelope) {
       const result = await downloadTelegramFile(envelope.event.fileId);

@@ -55,6 +55,10 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const backlogTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const unresolvedBacklog = new Map<string, InboundEnvelope[]>();
   const activeRuns = new Map<string, AbortController>();
+  const sessionIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const conversationRefs = new Map<string, InboundEnvelope["conversation"]>();
+  const sessionIdleTimeoutSeconds = input.config.sessionIdleTimeoutSeconds;
+  const sessionIdleTimeoutMs = sessionIdleTimeoutSeconds * 1000;
   const permissionButtonKeys = new Map<string, string>();
   const permissionTimeoutMsRaw = Number.parseInt(process.env.BUI_PERMISSION_TIMEOUT_MS || "600000", 10);
   const permissionTimeoutMs = Number.isFinite(permissionTimeoutMsRaw) && permissionTimeoutMsRaw > 0 ? permissionTimeoutMsRaw : 600000;
@@ -121,6 +125,37 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     return undefined;
   };
 
+  const clearSessionIdleTimer = (key: string) => {
+    const timer = sessionIdleTimers.get(key);
+    if (timer) {
+      clearTimeout(timer);
+      sessionIdleTimers.delete(key);
+    }
+  };
+
+  const scheduleSessionIdleExpiry = (key: string) => {
+    if (sessionIdleTimeoutMs <= 0) {
+      return;
+    }
+    clearSessionIdleTimer(key);
+    const conversation = conversationRefs.get(key);
+    if (!conversation) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      sessionIdleTimers.delete(key);
+      void (async () => {
+        try {
+          await sessionStore.clearSessionForConversation(conversation);
+          logger.info({ conversation: key, idleSeconds: sessionIdleTimeoutSeconds }, "[bui] Cleared idle conversation session mapping.");
+        } catch (error) {
+          logger.warn({ conversation: key, error }, "[bui] Failed to clear idle conversation session mapping.");
+        }
+      })();
+    }, sessionIdleTimeoutMs);
+    sessionIdleTimers.set(key, timer);
+  };
+
   const processEnvelope = async (bridge: (typeof input.bridges)[number], envelope: InboundEnvelope): Promise<void> => {
     const key = conversationKey(envelope.conversation);
     const controller = new AbortController();
@@ -135,20 +170,45 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     const maxActivityLinesPerFlush = Number.isFinite(maxActivityLinesPerFlushRaw) && maxActivityLinesPerFlushRaw > 0
       ? maxActivityLinesPerFlushRaw
       : 8;
+    const activityRetainLinesRaw = Number.parseInt(process.env.BUI_ACTIVITY_RETAIN_LINES || "24", 10);
+    const activityRetainLines = Number.isFinite(activityRetainLinesRaw) && activityRetainLinesRaw > 0 ? activityRetainLinesRaw : 24;
     const activityQueue: string[] = [];
+    const activityLines: string[] = [];
+    let activityMessageToken: string | undefined;
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
     let flushing = Promise.resolve();
+
+    const renderActivityText = (status?: string): string => {
+      const recent = activityLines.slice(-activityRetainLines);
+      const body = recent.map((line) => `> ${line}`);
+      const lines = [status ? `OpenCode ${status}` : "OpenCode activity", ...body];
+      let text = lines.join("\n");
+      while (text.length > 3500 && lines.length > 2) {
+        lines.splice(1, 1);
+        text = lines.join("\n");
+      }
+      return text;
+    };
 
     const flushActivity = async (): Promise<void> => {
       if (activityQueue.length === 0) {
         return;
       }
       const lines = activityQueue.splice(0, maxActivityLinesPerFlush);
-      await bridge.send({
-        bridgeId: envelope.bridgeId,
-        conversation: envelope.conversation,
-        text: ["OpenCode activity:", ...lines.map((line) => `- ${line}`)].join("\n"),
-      });
+      activityLines.push(...lines);
+      if (bridge.upsertActivityMessage) {
+        activityMessageToken = await bridge.upsertActivityMessage({
+          conversation: envelope.conversation,
+          text: renderActivityText("activity"),
+          ...(activityMessageToken ? { token: activityMessageToken } : {}),
+        });
+      } else {
+        await bridge.send({
+          bridgeId: envelope.bridgeId,
+          conversation: envelope.conversation,
+          text: renderActivityText("activity"),
+        });
+      }
       if (activityQueue.length > 0) {
         flushing = flushing.then(() => flushActivity());
       }
@@ -168,11 +228,19 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     const silentStartCommands = new Set(["start", "pid", "interrupt", "interupt", "reload", "health", "session", "cwd", "context"]);
     const shouldAnnounceStart = !slash || !silentStartCommands.has(slash.command);
     if (shouldAnnounceStart) {
-      await bridge.send({
-        bridgeId: envelope.bridgeId,
-        conversation: envelope.conversation,
-        text: "OpenCode run started.",
-      });
+      activityLines.push("run started");
+      if (bridge.upsertActivityMessage) {
+        activityMessageToken = await bridge.upsertActivityMessage({
+          conversation: envelope.conversation,
+          text: renderActivityText("starting"),
+        });
+      } else {
+        await bridge.send({
+          bridgeId: envelope.bridgeId,
+          conversation: envelope.conversation,
+          text: renderActivityText("starting"),
+        });
+      }
     }
 
     const program = routeInbound(envelope, {
@@ -305,6 +373,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
       if (controller.signal.aborted) {
         logger.info({ bridgeId: envelope.bridgeId }, "[bui] OpenCode run interrupted by user.");
+        activityLines.push("run interrupted");
+        if (bridge.upsertActivityMessage) {
+          await bridge.upsertActivityMessage({
+            conversation: envelope.conversation,
+            text: renderActivityText("interrupted"),
+            ...(activityMessageToken ? { token: activityMessageToken } : {}),
+          });
+        }
         await bridge.send({
           bridgeId: envelope.bridgeId,
           conversation: envelope.conversation,
@@ -313,6 +389,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
         return;
       }
       logger.error({ error: message, rawError: error, bridgeId: envelope.bridgeId }, "[bui] Failed to process envelope.");
+      activityLines.push(`run failed (${message})`);
+      if (bridge.upsertActivityMessage) {
+        await bridge.upsertActivityMessage({
+          conversation: envelope.conversation,
+          text: renderActivityText("failed"),
+          ...(activityMessageToken ? { token: activityMessageToken } : {}),
+        });
+      }
       await bridge.send({
         bridgeId: envelope.bridgeId,
         conversation: envelope.conversation,
@@ -324,6 +408,16 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       if (active === controller) {
         activeRuns.delete(key);
       }
+      scheduleSessionIdleExpiry(key);
+    }
+
+    activityLines.push("run completed");
+    if (bridge.upsertActivityMessage) {
+      activityMessageToken = await bridge.upsertActivityMessage({
+        conversation: envelope.conversation,
+        text: renderActivityText("completed"),
+        ...(activityMessageToken ? { token: activityMessageToken } : {}),
+      });
     }
 
     logger.info({ bridgeId: envelope.bridgeId, conversation: key, outboundCount: outbound.length }, "[bui] Outbound responses generated.");
@@ -495,6 +589,8 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       }
         logger.info({ bridgeId: envelope.bridgeId, eventType: envelope.event.type }, "[bui] Inbound event intercepted from bridge.");
         const key = conversationKey(envelope.conversation);
+        conversationRefs.set(key, envelope.conversation);
+        clearSessionIdleTimer(key);
 
         if (isInterruptEvent(envelope)) {
           const active = activeRuns.get(key);
@@ -533,6 +629,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
               `- Session: ${mapping?.sessionId || "none"}`,
               `- Workspace: ${mapping?.cwd || "global default"}`,
               `- OpenCode attach mode: ${input.config.opencodeAttachUrl ? "remote" : "embedded"}`,
+              `- Session idle timeout: ${input.config.sessionIdleTimeoutSeconds}s`,
               ...(input.config.opencodeAttachUrl ? [`- OpenCode attach URL: ${input.config.opencodeAttachUrl}`] : []),
               `- Pending permissions: ${pendingForConversation.length}`,
             ].join("\n"),

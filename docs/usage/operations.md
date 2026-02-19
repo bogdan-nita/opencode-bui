@@ -14,9 +14,16 @@ In-chat runtime controls:
 - `/interrupt` (or `/interupt`) cancels the active OpenCode run for that conversation.
 - `/context` shows active run/session/workspace details, attach mode, and pending permission count.
 - While a run is active, BUI streams OpenCode activity updates live to the bridge.
+- Activity updates are rendered as quoted lines (`> step started`, `> tool (running)`, `> step finished (...)`) and updated in-place when bridge message editing is available.
 - Permission prompts from OpenCode are routed to bridge buttons (`Allow Once`, `Always Allow`, `Reject`).
 - Permission decisions are conversation-bound and requester-bound.
 - Inbound media messages are downloaded, stored under runtime uploads, and analyzed through OpenCode.
+
+## Session idle timeout
+
+- `BUI_SESSION_IDLE_TIMEOUT_SECONDS` controls how long conversation-to-session mapping is kept without activity.
+- Default is `900` seconds.
+- On timeout, mapping is cleared; the next message starts a fresh mapped session.
 
 Bridge command registration includes native BUI commands plus command markdown files discovered from current OpenCode config directories (`commands/` or `.opencode/commands/`).
 
@@ -42,6 +49,9 @@ Bridge command registration includes native BUI commands plus command markdown f
 
 - Runtime logs use `pino` and are pretty-printed by default in interactive terminals.
 - Disable pretty output with `BUI_PRETTY_LOGS=0`.
+- Logs are also written to file by default (`./opencode-bui.log`).
+- Override path with `BUI_LOG_FILE=/absolute/path/opencode-bui.log`.
+- Disable file logging with `BUI_LOG_TO_FILE=0`.
 
 ## Hybrid attach mode
 

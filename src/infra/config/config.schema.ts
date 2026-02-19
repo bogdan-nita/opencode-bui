@@ -10,6 +10,7 @@ export const userConfigSchema = z
     lockPath: z.string().optional(),
     opencodeBin: z.string().optional(),
     opencodeAttachUrl: z.string().optional(),
+    sessionIdleTimeoutSeconds: z.number().int().positive().optional(),
     bridges: z
       .object({
         telegram: z
@@ -45,6 +46,7 @@ export const userConfigSchema = z
 export const mergedConfigSchema = z.object({
   opencodeBin: z.string().min(1),
   opencodeAttachUrl: z.string(),
+  sessionIdleTimeoutSeconds: z.number().int().positive(),
   runtimeDir: z.string().min(1),
   dbPath: z.string().min(1),
   uploadDir: z.string().min(1),

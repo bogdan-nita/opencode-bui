@@ -1,5 +1,6 @@
 import { createOpencode, createOpencodeClient, type OpencodeClient, type Part, type ToolPart } from "@opencode-ai/sdk";
 import { isAbsolute, resolve } from "node:path";
+import { stat } from "node:fs/promises";
 import { fileExists } from "@infra/runtime/runtime-fs.utils.js";
 import { logger } from "@infra/runtime/logger.utils.js";
 import type { OutboundAttachment } from "@core/domain/envelope.types.js";
@@ -131,12 +132,14 @@ function extractPermissionRequest(payload: OpencodeEvent): {
     return undefined;
   }
 
+  const normalizedPattern = patternRaw || metadataPattern;
+
   return {
     id,
     sessionId,
     title: inferredTitle || metadataTitle || "permission requested",
     type: inferredType || metadataType || "unknown",
-    ...(patternRaw || metadataPattern ? { pattern: patternRaw || metadataPattern } : {}),
+    ...(typeof normalizedPattern === "string" ? { pattern: normalizedPattern } : {}),
     ...(details ? { details } : {}),
     ...(filePathCandidate ? { filePathCandidate } : {}),
   };
@@ -292,6 +295,14 @@ function normalizeEvent(value: unknown): OpencodeEvent | undefined {
 async function resolveAttachment(pathLike: string, cwd: string, mime?: string): Promise<OutboundAttachment | undefined> {
   const filePath = normalizePath(pathLike, cwd);
   if (!(await fileExists(filePath))) {
+    return undefined;
+  }
+  try {
+    const details = await stat(filePath);
+    if (!details.isFile()) {
+      return undefined;
+    }
+  } catch {
     return undefined;
   }
   return {

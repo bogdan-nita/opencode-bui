@@ -9,6 +9,7 @@ import type { RuntimeConfig } from "@infra/config/config.types.js";
 function createTestConfig(root: string): RuntimeConfig {
   return {
     opencodeBin: "opencode",
+    sessionIdleTimeoutSeconds: 900,
     paths: {
       runtimeDir: root,
       dbPath: join(root, "opencode-bui.db"),

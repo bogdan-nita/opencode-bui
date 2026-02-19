@@ -230,6 +230,7 @@ function defaultsInput(discovery?: ConfigDiscovery, defaultDbDir?: string): Merg
   return {
     opencodeBin: "opencode",
     opencodeAttachUrl: "",
+    sessionIdleTimeoutSeconds: 900,
     runtimeDir,
     dbPath: resolve(dbBaseDir, "opencode-bui.db"),
     uploadDir: resolve(runtimeDir, "uploads"),
@@ -286,6 +287,7 @@ function fromEnv(): LooseInput {
   return {
     opencodeBin: process.env.OPENCODE_BIN?.trim() || undefined,
     opencodeAttachUrl: process.env.OPENCODE_ATTACH_URL?.trim() || undefined,
+    sessionIdleTimeoutSeconds: parseNumber(process.env.BUI_SESSION_IDLE_TIMEOUT_SECONDS),
     runtimeDir: process.env.BUI_RUNTIME_DIR?.trim() || undefined,
     dbPath: process.env.BUI_DB_PATH?.trim() || undefined,
     uploadDir: process.env.BUI_UPLOAD_DIR?.trim() || process.env.TELEGRAM_UPLOAD_DIR?.trim() || undefined,
@@ -313,6 +315,7 @@ function fromUserConfig(raw: unknown): LooseInput {
   return {
     opencodeBin: parsed.opencodeBin?.trim() || undefined,
     opencodeAttachUrl: parsed.opencodeAttachUrl?.trim() || undefined,
+    sessionIdleTimeoutSeconds: parsed.sessionIdleTimeoutSeconds,
     runtimeDir: parsed.runtimeDir?.trim() || undefined,
     dbPath: parsed.dbPath?.trim() || undefined,
     uploadDir: parsed.uploadDir?.trim() || undefined,
@@ -371,6 +374,7 @@ export function buildRuntimeConfig(input: LooseInput, discovery: ConfigDiscovery
   return {
     opencodeBin: merged.opencodeBin,
     ...(merged.opencodeAttachUrl ? { opencodeAttachUrl: merged.opencodeAttachUrl } : {}),
+    sessionIdleTimeoutSeconds: merged.sessionIdleTimeoutSeconds,
     paths: {
       runtimeDir: merged.runtimeDir,
       dbPath: merged.dbPath,
