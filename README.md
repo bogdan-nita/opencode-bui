@@ -6,7 +6,7 @@ It currently supports Telegram and Discord bridges (enabled per config).
 
 ## Highlights
 
-- Bridge-agnostic core runtime (`src/core/application`) with bridge-owned behavior contracts.
+- Bridge-agnostic core runtime (`packages/opencode-bui-bridge/src/core/application`) with bridge-owned behavior contracts.
 - One Telegram chat maps to one OpenCode session for predictable conversational context.
 - Slash parity: unknown slash commands are forwarded to OpenCode (`/help`, `/init`, `/undo`, `/redo`, and more).
 - BUI-native operations: `/new`, `/cd`, `/cwd`, `/session`, `/screenshot`, `/reload`, `/pid`, `/health`, `/agent ...`.
@@ -165,16 +165,14 @@ bun run build
 
 ## Project Structure
 
-- `packages/opencode-bui-bridge/*`: bridge package wrapper and bridge-facing scripts
-- `packages/opencode-bui-plugin/*`: plugin package wrapper and plugin-facing scripts
-- `src/bin/opencode-bui.ts`: bridge runtime CLI implementation
-- `src/bin/opencode-bui-plugin.ts`: plugin helper CLI implementation
-- `src/core/domain/*`: shared bridge-agnostic contracts and schemas
-- `src/core/ports/*`: interfaces/ports
-- `src/core/application/*`: runtime orchestration and routing
-- `src/infra/*`: config, storage, lock services, OpenCode adapters
-- `src/bridges/telegram/*`: Telegram bridge implementation
-- `src/bridges/discord/*`: Discord bridge implementation
+- `packages/opencode-bui-bridge/src/bin/*`: bridge CLI and onboarding
+- `packages/opencode-bui-bridge/src/core/*`: runtime domain, ports, and orchestration
+- `packages/opencode-bui-bridge/src/infra/*`: config, storage, db, lock, OpenCode adapter
+- `packages/opencode-bui-bridge/src/bridges/*`: Telegram/Discord bridge adapters
+- `packages/opencode-bui-plugin/src/bin/*`: plugin helper CLI
+- `packages/opencode-bui-plugin/src/infra/*`: plugin-side bridge discovery helpers
+- `src/bin/opencode-bui.ts`: root `opencode-bui` bunx entry wrapper
+- `src/bin/opencode-bui-plugin.ts`: root plugin wrapper entry
 - `docs/*`: architecture, usage, and contribution guides
 
 Naming conventions:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { cac } from "cac";
-import { defaultPluginDiscoveryPath, readPluginBridgeDiscovery } from "@infra/plugin-bridge/discovery.utils.js";
+import { defaultPluginDiscoveryPath, readPluginBridgeDiscovery } from "../infra/plugin-bridge/discovery.utils.js";
 
 async function resolveBridgeEndpoint(input: { url?: string; token?: string; discoveryPath?: string }): Promise<{ url: string; token: string }> {
   if (input.url && input.token) {

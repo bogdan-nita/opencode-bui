@@ -14,17 +14,17 @@
     "resolvePackageJsonImports": true,
     "allowUnusedLabels": false,
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@bin/*": ["src/bin/*"],
-      "@core/*": ["src/core/*"],
-      "@infra/*": ["src/infra/*"],
-      "@bridges/*": ["src/bridges/*"]
+      "@bin/*": ["packages/opencode-bui-bridge/src/bin/*"],
+      "@core/*": ["packages/opencode-bui-bridge/src/core/*"],
+      "@infra/*": ["packages/opencode-bui-bridge/src/infra/*"],
+      "@bridges/*": ["packages/opencode-bui-bridge/src/bridges/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "packages/**/*.ts", "test/**/*.ts"]
 }

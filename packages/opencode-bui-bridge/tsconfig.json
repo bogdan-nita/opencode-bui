@@ -1,8 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "../../",
-    "baseUrl": "../../",
+    "rootDir": ".",
+    "baseUrl": ".",
     "paths": {
       "@bin/*": ["src/bin/*"],
       "@core/*": ["src/core/*"],
@@ -10,5 +10,5 @@
       "@bridges/*": ["src/bridges/*"]
     }
   },
-  "include": ["src/**/*.ts", "../../src/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }
