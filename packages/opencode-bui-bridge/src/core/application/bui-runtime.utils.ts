@@ -19,10 +19,10 @@ import { AgentStoreService, ClockService, OpenCodeClientService, SessionStoreSer
 import type { InboundEnvelope } from "../domain/envelope.types.js";
 import { startAllBridges, stopAllBridges, waitForShutdownSignal } from "./bridge-supervisor.utils.js";
 import { bridgeDefinitionById } from "./bridge-registry.utils.js";
-import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import { writePluginBridgeDiscovery } from "@infra/plugin-bridge/discovery.utils.js";
+import { createPluginBridgeApp } from "@infra/plugin-bridge/api.utils.js";
 
 const nativeCommands = [
   { command: "start", description: "Show bot help" },
@@ -82,16 +82,6 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     timer: ReturnType<typeof setTimeout>;
   }>();
 
-  const pluginBridgePayloadSchema = z.object({
-    sessionId: z.string().min(1),
-    text: z.string().optional(),
-    attachments: z.array(z.object({
-      filePath: z.string().min(1),
-      kind: z.enum(["image", "audio", "video", "document"]).optional(),
-      caption: z.string().optional(),
-    })).optional(),
-  });
-
   const pluginBridgeServerEnabled = process.env.BUI_PLUGIN_BRIDGE_SERVER === "1";
   const pluginBridgeHost = process.env.BUI_PLUGIN_BRIDGE_HOST?.trim() || "127.0.0.1";
   const pluginBridgePortRaw = Number.parseInt(process.env.BUI_PLUGIN_BRIDGE_PORT || "4499", 10);
@@ -106,62 +96,45 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const bunRuntime = (globalThis as { Bun?: { serve: (input: { hostname: string; port: number; fetch: (request: Request) => Promise<Response> | Response }) => { stop: (closeActiveConnections?: boolean) => void } } }).Bun;
 
   if (pluginBridgeServerEnabled && bunRuntime) {
-    pluginBridgeServer = bunRuntime.serve({
-      hostname: pluginBridgeHost,
-      port: pluginBridgePort,
-      fetch: async (request: Request) => {
-        if (request.method === "GET") {
-          return new Response("ok", { status: 200 });
-        }
-        if (request.method !== "POST") {
-          return new Response("method not allowed", { status: 405 });
-        }
-        if (new URL(request.url).pathname !== "/v1/plugin/send") {
-          return new Response("not found", { status: 404 });
-        }
-
-        const authHeader = request.headers.get("x-bui-token")?.trim();
-        if (pluginBridgeToken && authHeader !== pluginBridgeToken) {
-          return new Response("unauthorized", { status: 401 });
-        }
-
-        let body: unknown;
-        try {
-          body = await request.json();
-        } catch {
-          return new Response("invalid json", { status: 400 });
-        }
-        const parsed = pluginBridgePayloadSchema.safeParse(body);
-        if (!parsed.success) {
-          return new Response("invalid payload", { status: 400 });
-        }
-
-        const conversation = await sessionStore.getConversationBySessionId(parsed.data.sessionId);
+    const app = createPluginBridgeApp({
+      token: pluginBridgeToken,
+      onSend: async (payload) => {
+        const conversation = await sessionStore.getConversationBySessionId(payload.sessionId);
         if (!conversation) {
-          return new Response("session not mapped to bridge conversation", { status: 404 });
+          return { ok: false as const, status: 404 as const, error: "session not mapped to bridge conversation" };
         }
         const bridge = input.bridges.find((item) => item.id === conversation.bridgeId);
         if (!bridge) {
-          return new Response("bridge not available", { status: 404 });
+          return { ok: false as const, status: 404 as const, error: "bridge not available" };
         }
 
-        await bridge.send({
-          bridgeId: bridge.id,
-          conversation,
-          ...(parsed.data.text ? { text: parsed.data.text } : {}),
-          ...(parsed.data.attachments
-            ? {
-              attachments: parsed.data.attachments.map((entry) => ({
-                filePath: entry.filePath,
-                kind: entry.kind || "document",
-                ...(entry.caption ? { caption: entry.caption } : {}),
-              })),
-            }
-            : {}),
-        });
-
-        return new Response("ok", { status: 200 });
+        try {
+          await bridge.send({
+            bridgeId: bridge.id,
+            conversation,
+            ...(payload.text ? { text: payload.text } : {}),
+            ...(payload.attachments
+              ? {
+                attachments: payload.attachments.map((entry) => ({
+                  filePath: entry.filePath,
+                  kind: entry.kind || "document",
+                  ...(entry.caption ? { caption: entry.caption } : {}),
+                })),
+              }
+              : {}),
+          });
+          return { ok: true as const };
+        } catch (error) {
+          logger.error({ error }, "[bui] Plugin bridge send failed.");
+          return { ok: false as const, status: 500 as const, error: "bridge send failed" };
+        }
       },
+    });
+
+    pluginBridgeServer = bunRuntime.serve({
+      hostname: pluginBridgeHost,
+      port: pluginBridgePort,
+      fetch: app.fetch,
     });
     const pluginBridgeUrl = `http://${pluginBridgeHost}:${pluginBridgePort}/v1/plugin/send`;
     await writePluginBridgeDiscovery(pluginDiscoveryPath, {

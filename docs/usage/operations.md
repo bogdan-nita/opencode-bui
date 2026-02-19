@@ -51,7 +51,7 @@ Bridge command registration includes native BUI commands plus command markdown f
 
 ## Onboarding
 
-- Interactive setup: `bun src/bin/opencode-bui.ts onboard`
+- Interactive setup: `bun run onboard`
 - Onboarding now starts runtime automatically after config/env validation.
 - Onboarding writes config into the closest OpenCode context (`.opencode/bui` when `.opencode` exists, otherwise the OpenCode root directory).
 - `.env` creation is optional during onboarding.
@@ -80,6 +80,9 @@ Bridge command registration includes native BUI commands plus command markdown f
   - `opencode-bui-plugin send --session <sessionId> --text "..."`
   - `opencode-bui-plugin send --session <sessionId> --file /path/to/file --caption "..."`
 - Plugin helper reads endpoint+token from discovery automatically unless overridden by `--url`/`--token`.
+- OpenCode plugin file example (`~/.config/opencode/plugins/opencode-bui-plugin.js`):
+  - `import { OpenCodeBuiPlugin } from "opencode-bui-plugin"`
+  - `export const BuiBridgePlugin = OpenCodeBuiPlugin`
 
 Session visibility note:
 

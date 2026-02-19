@@ -2,6 +2,7 @@
 
 import { cac } from "cac";
 import { defaultPluginDiscoveryPath, readPluginBridgeDiscovery } from "../infra/plugin-bridge/discovery.utils.js";
+import { createPluginBridgeClient } from "../bridge-client/client.utils.js";
 
 async function resolveBridgeEndpoint(input: { url?: string; token?: string; discoveryPath?: string }): Promise<{ url: string; token: string }> {
   if (input.url && input.token) {
@@ -79,14 +80,8 @@ cli
       discoveryPath: typeof options.discovery === "string" ? options.discovery : undefined,
     });
 
-    const response = await fetch(endpoint.url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-bui-token": endpoint.token,
-      },
-      body: JSON.stringify(payload),
-    });
+    const client = createPluginBridgeClient(endpoint);
+    const response = await client.v1.plugin.send.$post({ json: payload });
 
     if (!response.ok) {
       const body = await response.text();

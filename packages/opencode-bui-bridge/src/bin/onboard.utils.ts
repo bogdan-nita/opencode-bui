@@ -30,7 +30,9 @@ export async function runOnboarding(): Promise<OnboardResult> {
 
   const configPath = resolve(targetRoot, "opencode-bui.config.ts");
   const envPath = resolve(targetRoot, ".env");
-  const pluginEnvPath = resolve(process.env.HOME ?? process.cwd(), ".config", "opencode", "plugins", ".env");
+  const pluginDir = resolve(process.env.HOME ?? process.cwd(), ".config", "opencode", "plugins");
+  const pluginEnvPath = resolve(pluginDir, ".env");
+  const pluginFilePath = resolve(pluginDir, "opencode-bui-plugin.js");
 
   const interactive = assertNotCancelled(
     await confirm({ message: "Run interactive onboarding?", initialValue: true }),
@@ -150,6 +152,13 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "",
   ].join("\n");
 
+  const pluginFileTemplate = [
+    "import { OpenCodeBuiPlugin } from \"opencode-bui-plugin\";",
+    "",
+    "export const BuiBridgePlugin = OpenCodeBuiPlugin;",
+    "",
+  ].join("\n");
+
   await writeIfMissing(configPath, configTemplate);
   if (writeEnvFile) {
     await writeIfMissing(envPath, envTemplate);
@@ -157,6 +166,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
   if (setupPluginEnv) {
     await ensureDir(dirname(pluginEnvPath));
     await writeIfMissing(pluginEnvPath, pluginEnvTemplate);
+    await writeIfMissing(pluginFilePath, pluginFileTemplate);
   }
 
   await readRuntimeConfig({ fresh: true, cwd: targetRoot });
@@ -165,5 +175,6 @@ export async function runOnboarding(): Promise<OnboardResult> {
     configPath,
     ...(writeEnvFile ? { envPath } : {}),
     ...(setupPluginEnv ? { pluginEnvPath } : {}),
+    ...(setupPluginEnv ? { pluginFilePath } : {}),
   };
 }

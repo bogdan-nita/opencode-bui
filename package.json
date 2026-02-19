@@ -9,20 +9,21 @@
     "packages/opencode-bui-plugin"
   ],
   "bin": {
-    "opencode-bui": "src/bin/opencode-bui.ts"
+    "opencode-bui": "packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts",
+    "opencode-bui-plugin": "packages/opencode-bui-plugin/src/bin/opencode-bui-plugin.ts"
   },
   "scripts": {
-    "dev": "bun --watch src/bin/opencode-bui.ts start",
+    "dev": "bun --watch packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts start",
     "dev:telegram": "bun --watch packages/opencode-bui-bridge/src/standalone-bot.ts",
-    "start": "bun src/bin/opencode-bui.ts start",
-    "start:bridge": "bun src/bin/opencode-bui.ts start",
+    "start": "bun packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts start",
+    "start:bridge": "bun packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts start",
     "start:plugin:send": "bun packages/opencode-bui-plugin/src/bin/opencode-bui-plugin.ts send",
     "plugin:send": "bun packages/opencode-bui-plugin/src/bin/opencode-bui-plugin.ts send",
-    "onboard": "bun src/bin/opencode-bui.ts onboard",
-    "doctor": "bun src/bin/opencode-bui.ts doctor",
-    "bridge:test": "bun src/bin/opencode-bui.ts bridge:test",
-    "build": "bun build src/bin/opencode-bui.ts src/bin/opencode-bui-plugin.ts packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts packages/opencode-bui-plugin/src/bin/opencode-bui-plugin.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
-    "lint": "bunx oxlint src test packages",
+    "onboard": "bun packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts onboard",
+    "doctor": "bun packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts doctor",
+    "bridge:test": "bun packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts bridge:test",
+    "build": "bun build packages/opencode-bui-bridge/src/bin/opencode-bui-bridge.ts packages/opencode-bui-plugin/src/bin/opencode-bui-plugin.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
+    "lint": "bunx oxlint test packages",
     "format": "bunx oxfmt --config .oxfmt.json .",
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
@@ -37,6 +38,7 @@
   "dependencies": {
     "@clack/prompts": "^0.10.1",
     "@libsql/client": "^0.14.0",
+    "@opencode-ai/plugin": "^1.2.6",
     "@opencode-ai/sdk": "^1.2.6",
     "c12": "^3.1.0",
     "cac": "^6.7.14",
@@ -47,6 +49,7 @@
     "drizzle-orm": "^0.44.5",
     "effect": "^3.14.0",
     "grammy": "^1.38.2",
+    "hono": "^4.12.0",
     "pino": "^9.7.0",
     "pino-pretty": "^13.1.2",
     "remeda": "^2.21.3",

@@ -9,7 +9,6 @@
 - `packages/opencode-bui-bridge/src/bridges/<name>`: bridge-specific edge adapters and bridge definitions.
 - `packages/opencode-bui-bridge/src/bin`: bridge CLI entrypoints and onboarding.
 - `packages/opencode-bui-plugin/src`: plugin CLI and plugin-side discovery helpers.
-- `src/bin`: thin root wrappers for bunx entry commands.
 
 ## Runtime flow
 

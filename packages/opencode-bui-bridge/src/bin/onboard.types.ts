@@ -3,4 +3,5 @@ export type OnboardResult = {
   configPath: string;
   envPath?: string;
   pluginEnvPath?: string;
+  pluginFilePath?: string;
 };

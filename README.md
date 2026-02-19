@@ -57,6 +57,15 @@ bun run --cwd packages/opencode-bui-bridge start
 bun run --cwd packages/opencode-bui-plugin send -- --session <sessionId> --text "hello"
 ```
 
+OpenCode plugin registration (global example):
+
+```js
+// ~/.config/opencode/plugins/opencode-bui-plugin.js
+import { OpenCodeBuiPlugin } from "opencode-bui-plugin"
+
+export const BuiBridgePlugin = OpenCodeBuiPlugin
+```
+
 Optional local binary link:
 
 ```bash
@@ -171,8 +180,6 @@ bun run build
 - `packages/opencode-bui-bridge/src/bridges/*`: Telegram/Discord bridge adapters
 - `packages/opencode-bui-plugin/src/bin/*`: plugin helper CLI
 - `packages/opencode-bui-plugin/src/infra/*`: plugin-side bridge discovery helpers
-- `src/bin/opencode-bui.ts`: root `opencode-bui` bunx entry wrapper
-- `src/bin/opencode-bui-plugin.ts`: root plugin wrapper entry
 - `docs/*`: architecture, usage, and contribution guides
 
 Naming conventions:

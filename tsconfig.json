@@ -26,5 +26,5 @@
       "@bridges/*": ["packages/opencode-bui-bridge/src/bridges/*"]
     }
   },
-  "include": ["src/**/*.ts", "packages/**/*.ts", "test/**/*.ts"]
+  "include": ["packages/**/*.ts", "test/**/*.ts"]
 }
