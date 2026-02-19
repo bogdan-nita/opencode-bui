@@ -17,6 +17,7 @@ In-chat runtime controls:
 - Activity updates are rendered as quoted lines (`> step started`, `> tool (running)`, `> step finished (...)`) and updated in-place when bridge message editing is available.
 - Permission prompts from OpenCode are routed to bridge buttons (`Allow Once`, `Always Allow`, `Reject`).
 - Permission decisions are conversation-bound and requester-bound.
+- Permission state is persisted so first valid click resolves the request and repeated clicks are safely treated as already handled.
 - Inbound media messages are downloaded, stored under runtime uploads, and analyzed through OpenCode.
 
 ## Session idle timeout

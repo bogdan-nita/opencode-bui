@@ -58,6 +58,19 @@ export async function createBuiDb(dbPath: string): Promise<BuiDb> {
     )
   `);
 
+  await client.execute(`
+    create table if not exists permission_requests (
+      permission_id text primary key,
+      conversation_key text not null,
+      requester_user_id text not null,
+      status text not null,
+      response text,
+      expires_at_unix_seconds text not null,
+      created_at text not null,
+      updated_at text not null
+    )
+  `);
+
   return {
     client,
     db,

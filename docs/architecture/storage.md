@@ -17,6 +17,7 @@
 - `conversation_sessions`
 - `session_workdirs`
 - `agent_templates`
+- `permission_requests` (pending/submitted/expired permission state for idempotent bridge callbacks)
 
 Defined in `src/infra/db/db.schema.ts`.
 

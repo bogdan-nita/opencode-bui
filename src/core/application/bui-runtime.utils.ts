@@ -8,6 +8,7 @@ import { createBuiDb } from "@infra/db/db.utils.js";
 import { createLibsqlSessionStore } from "@infra/store/libsql-session-store.utils.js";
 import { createLibsqlAgentStore } from "@infra/store/libsql-agent-store.utils.js";
 import { createFileMediaStore } from "@infra/store/file-media-store.utils.js";
+import { createLibsqlPermissionStore } from "@infra/store/libsql-permission-store.utils.js";
 import { captureScreenshot } from "./media-coordinator.utils.js";
 import { conversationKey } from "./conversation-router.utils.js";
 import { chooseBacklogMessages, isBacklogMessage } from "./backlog-coordinator.utils.js";
@@ -46,6 +47,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const sessionStore = createLibsqlSessionStore(database);
   const agentStore = createLibsqlAgentStore(database);
   const mediaStore = createFileMediaStore(input.config.paths.uploadDir);
+  const permissionStore = createLibsqlPermissionStore(database);
   const openCodeClient = createOpenCodeClient({
     opencodeBin: input.config.opencodeBin,
     ...(input.config.opencodeAttachUrl ? { attachUrl: input.config.opencodeAttachUrl } : {}),
@@ -59,31 +61,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const conversationRefs = new Map<string, InboundEnvelope["conversation"]>();
   const sessionIdleTimeoutSeconds = input.config.sessionIdleTimeoutSeconds;
   const sessionIdleTimeoutMs = sessionIdleTimeoutSeconds * 1000;
-  const permissionButtonKeys = new Map<string, string>();
   const permissionTimeoutMsRaw = Number.parseInt(process.env.BUI_PERMISSION_TIMEOUT_MS || "600000", 10);
   const permissionTimeoutMs = Number.isFinite(permissionTimeoutMsRaw) && permissionTimeoutMsRaw > 0 ? permissionTimeoutMsRaw : 600000;
   const pendingPermissions = new Map<string, {
     conversationKey: string;
     requesterUserId: string;
-    buttonKey: string;
     resolve: (response: "once" | "always" | "reject") => void;
     timer: ReturnType<typeof setTimeout>;
   }>();
-  const settledPermissionButtonKeys = new Map<string, "submitted" | "expired">();
-  const settledPermissionButtonTtlMsRaw = Number.parseInt(process.env.BUI_PERMISSION_SETTLED_TTL_MS || "900000", 10);
-  const settledPermissionButtonTtlMs = Number.isFinite(settledPermissionButtonTtlMsRaw) && settledPermissionButtonTtlMsRaw > 0
-    ? settledPermissionButtonTtlMsRaw
-    : 900000;
-
-  const markPermissionButtonKeySettled = (buttonKey: string, state: "submitted" | "expired") => {
-    settledPermissionButtonKeys.set(buttonKey, state);
-    setTimeout(() => {
-      const current = settledPermissionButtonKeys.get(buttonKey);
-      if (current === state) {
-        settledPermissionButtonKeys.delete(buttonKey);
-      }
-    }, settledPermissionButtonTtlMs);
-  };
 
   const isInterruptEvent = (envelope: InboundEnvelope): boolean => {
     if (envelope.event.type === "slash") {
@@ -252,8 +237,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       },
       onPermissionRequest: async (permission) => {
         logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, type: permission.type }, "[bui] Permission request received from OpenCode.");
-        const buttonKey = Math.random().toString(36).slice(2, 10);
-        permissionButtonKeys.set(buttonKey, permission.id);
+        const expiresAtUnixSeconds = Math.floor(Date.now() / 1000) + Math.ceil(permissionTimeoutMs / 1000);
+        await permissionStore.createPending({
+          permissionId: permission.id,
+          conversationKey: key,
+          requesterUserId: envelope.user.id,
+          expiresAtUnixSeconds,
+        });
+
         const permissionLines = [
           "Permission required",
           `- Request ID: ${permission.id}`,
@@ -271,10 +262,10 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           text: permissionLines.join("\n"),
           buttons: [
             [
-              { id: "permission-response", label: "Allow Once", value: `once:${buttonKey}` },
-              { id: "permission-response", label: "Always Allow", value: `always:${buttonKey}` },
+              { id: "permission-response", label: "Allow Once", value: `once:${permission.id}` },
+              { id: "permission-response", label: "Always Allow", value: `always:${permission.id}` },
             ],
-            [{ id: "permission-response", label: "Reject", value: `reject:${buttonKey}` }],
+            [{ id: "permission-response", label: "Reject", value: `reject:${permission.id}` }],
           ],
         });
 
@@ -283,8 +274,6 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           if (previous) {
             clearTimeout(previous.timer);
             previous.resolve("reject");
-            permissionButtonKeys.delete(previous.buttonKey);
-            markPermissionButtonKeySettled(previous.buttonKey, "expired");
             logger.warn(
               { bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id },
               "[bui] Replaced existing pending permission entry.",
@@ -293,8 +282,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
           const timer = setTimeout(() => {
             pendingPermissions.delete(permission.id);
-            permissionButtonKeys.delete(buttonKey);
-            markPermissionButtonKeySettled(buttonKey, "expired");
+            void permissionStore.markExpired(permission.id);
             logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id }, "[bui] Permission request timed out; rejecting.");
             void bridge.send({
               bridgeId: envelope.bridgeId,
@@ -307,12 +295,9 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           pendingPermissions.set(permission.id, {
             conversationKey: key,
             requesterUserId: envelope.user.id,
-            buttonKey,
             resolve: (response) => {
               clearTimeout(timer);
               pendingPermissions.delete(permission.id);
-              permissionButtonKeys.delete(buttonKey);
-              markPermissionButtonKeySettled(buttonKey, "submitted");
               logger.info(
                 { bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, response },
                 "[bui] Resolving pending permission response.",
@@ -571,6 +556,96 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     });
   };
 
+  const resolvePermissionDecision = async (
+    bridge: (typeof input.bridges)[number],
+    envelope: InboundEnvelope,
+    key: string,
+    permissionId: string,
+    response: "once" | "always" | "reject",
+  ): Promise<boolean> => {
+    const record = await permissionStore.getById(permissionId);
+    if (!record) {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "No pending permission with that id.",
+      });
+      logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId }, "[bui] Permission response for unknown id.");
+      return true;
+    }
+
+    if (record.conversationKey !== key) {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "Permission request belongs to another conversation.",
+      });
+      logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId, expectedConversation: record.conversationKey }, "[bui] Permission response conversation mismatch.");
+      return true;
+    }
+
+    if (record.requesterUserId !== envelope.user.id) {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "Only the requester can resolve this permission.",
+      });
+      logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId, requesterUserId: record.requesterUserId, actorUserId: envelope.user.id }, "[bui] Permission response requester mismatch.");
+      return true;
+    }
+
+    const resolution = await permissionStore.resolvePending({ permissionId, response });
+    if (resolution === "expired") {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "This permission request has expired. Use the latest prompt or /permit <once|always|reject> <permissionId>.",
+      });
+      logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId }, "[bui] Permission response rejected because request expired.");
+      return true;
+    }
+
+    if (resolution === "already_submitted") {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "This permission request was already handled.",
+      });
+      logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId }, "[bui] Duplicate permission response ignored.");
+      return true;
+    }
+
+    if (resolution === "missing") {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "No pending permission with that id.",
+      });
+      logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId }, "[bui] Permission response missing at resolve step.");
+      return true;
+    }
+
+    const pending = pendingPermissions.get(permissionId);
+    if (pending) {
+      pending.resolve(response);
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: `Permission response submitted: ${response}`,
+      });
+      logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId, response }, "[bui] Permission resolved from active pending map.");
+      return true;
+    }
+
+    await bridge.send({
+      bridgeId: envelope.bridgeId,
+      conversation: envelope.conversation,
+      text: "Permission response recorded, but the originating run is no longer active.",
+    });
+    logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId, response }, "[bui] Permission resolved after pending handler was not found.");
+    return true;
+  };
+
   const opencodeCommands = await discoverOpencodeCommands(input.config.discovery);
   const bridgeCommands = mergeBridgeCommands(nativeCommands, opencodeCommands);
 
@@ -647,127 +722,26 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
         const permissionFromText = parsePermissionResponseFromText(envelope);
         if (permissionFromText) {
           logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permissionFromText.permissionId, response: permissionFromText.response }, "[bui] Permission response received from text command.");
-          const pending = pendingPermissions.get(permissionFromText.permissionId);
-          if (!pending) {
-            await bridge.send({
-              bridgeId: envelope.bridgeId,
-              conversation: envelope.conversation,
-              text: "No pending permission with that id.",
-            });
-            return;
-          }
-          if (pending.conversationKey !== key) {
-            await bridge.send({
-              bridgeId: envelope.bridgeId,
-              conversation: envelope.conversation,
-              text: "Permission request belongs to another conversation.",
-            });
-            return;
-          }
-          if (pending.requesterUserId !== envelope.user.id) {
-            await bridge.send({
-              bridgeId: envelope.bridgeId,
-              conversation: envelope.conversation,
-              text: "Only the requester can resolve this permission.",
-            });
-            return;
-          }
-          pending.resolve(permissionFromText.response);
-          await bridge.send({
-            bridgeId: envelope.bridgeId,
-            conversation: envelope.conversation,
-            text: `Permission response submitted: ${permissionFromText.response}`,
-          });
+          await resolvePermissionDecision(bridge, envelope, key, permissionFromText.permissionId, permissionFromText.response);
           return;
         }
 
         if (envelope.event.type === "button" && envelope.event.actionId.startsWith("bui:permission-response:")) {
           const parts = envelope.event.actionId.split(":");
           const responseRaw = parts[2];
-          const token = parts.slice(3).join(":");
-          const mappedPermissionId = permissionButtonKeys.get(token);
+          const permissionId = parts.slice(3).join(":");
           const response = responseRaw === "once" || responseRaw === "always" || responseRaw === "reject" ? responseRaw : "reject";
-          logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: mappedPermissionId, response }, "[bui] Permission button clicked.");
+          logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId, response }, "[bui] Permission button clicked.");
 
-          if (!mappedPermissionId) {
-            const settledState = settledPermissionButtonKeys.get(token);
-            if (settledState === "submitted") {
-              await bridge.send({
-                bridgeId: envelope.bridgeId,
-                conversation: envelope.conversation,
-                text: "This permission request was already handled.",
-              });
-              return;
-            }
-            if (settledState === "expired") {
-              await bridge.send({
-                bridgeId: envelope.bridgeId,
-                conversation: envelope.conversation,
-                text: "This permission request has expired. Use the latest prompt or /permit <once|always|reject> <permissionId>.",
-              });
-              return;
-            }
+          if (!permissionId) {
             await bridge.send({
               bridgeId: envelope.bridgeId,
               conversation: envelope.conversation,
-              text: "Permission button is stale (possibly from a previous run). Use the latest prompt or /permit <once|always|reject> <permissionId>.",
+              text: "Permission button payload is invalid.",
             });
             return;
           }
-
-          logger.info(
-            {
-              bridgeId: envelope.bridgeId,
-              conversation: key,
-              pendingPermissionIds: [...pendingPermissions.keys()],
-            },
-            "[bui] Current pending permission ids.",
-          );
-
-          const pending = pendingPermissions.get(mappedPermissionId);
-          if (!pending) {
-            logger.warn(
-              {
-                bridgeId: envelope.bridgeId,
-                conversation: key,
-                permissionId: mappedPermissionId,
-                pendingPermissionIds: [...pendingPermissions.keys()],
-              },
-              "[bui] No pending permission found for button response.",
-            );
-            await bridge.send({
-              bridgeId: envelope.bridgeId,
-              conversation: envelope.conversation,
-              text: "No pending permission request (it may have already expired or was from a previous run).",
-            });
-            return;
-          }
-
-          if (pending.conversationKey !== key) {
-            logger.warn({ bridgeId: envelope.bridgeId, conversation: key, expectedConversation: pending.conversationKey, permissionId: mappedPermissionId }, "[bui] Permission response conversation mismatch.");
-            await bridge.send({
-              bridgeId: envelope.bridgeId,
-              conversation: envelope.conversation,
-              text: "Permission request belongs to another conversation.",
-            });
-            return;
-          }
-
-          if (pending.requesterUserId !== envelope.user.id) {
-            await bridge.send({
-              bridgeId: envelope.bridgeId,
-              conversation: envelope.conversation,
-              text: "Only the requester can resolve this permission.",
-            });
-            return;
-          }
-
-          pending.resolve(response);
-          await bridge.send({
-            bridgeId: envelope.bridgeId,
-            conversation: envelope.conversation,
-            text: `Permission response submitted: ${response}`,
-          });
+          await resolvePermissionDecision(bridge, envelope, key, permissionId, response);
           return;
         }
 
