@@ -21,6 +21,73 @@ type OpencodeEvent = {
   properties?: Record<string, unknown>;
 };
 
+type BridgeAttachmentDirective = {
+  pathLike: string;
+  caption?: string;
+};
+
+function shouldCollectAutomaticAttachments(): boolean {
+  return process.env.BUI_AUTO_ATTACHMENTS === "1";
+}
+
+function shouldInjectBridgeToolPrompt(): boolean {
+  return process.env.BUI_AGENT_BRIDGE_TOOLS !== "0";
+}
+
+function stripQuotes(value: string): string {
+  const trimmed = value.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function parseBridgeAttachmentDirectives(text: string): { cleanText: string; directives: BridgeAttachmentDirective[] } {
+  const directives: BridgeAttachmentDirective[] = [];
+  const keptLines: string[] = [];
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.toLowerCase().startsWith("@bui.attach")) {
+      keptLines.push(rawLine);
+      continue;
+    }
+
+    const body = line.slice("@bui.attach".length).trim();
+    if (!body) {
+      continue;
+    }
+
+    const separator = body.indexOf("|");
+    const pathLike = stripQuotes(separator >= 0 ? body.slice(0, separator).trim() : body);
+    const caption = separator >= 0 ? body.slice(separator + 1).trim() : "";
+    if (!pathLike) {
+      continue;
+    }
+
+    directives.push({
+      pathLike,
+      ...(caption ? { caption } : {}),
+    });
+  }
+
+  return {
+    cleanText: keptLines.join("\n").trim(),
+    directives,
+  };
+}
+
+function buildBridgeToolsPreamble(): string {
+  return [
+    "Bridge tool rules (OpenCode BUI):",
+    "- To send a file/image/audio/video to the user, emit one line exactly in this format:",
+    "  @bui.attach <path> | <optional caption>",
+    "- Use absolute paths or paths relative to current working directory.",
+    "- Emit attach directives only when the user explicitly asked to receive files/media.",
+    "- You may emit multiple @bui.attach lines.",
+  ].join("\n");
+}
+
 function extractPermissionRequest(payload: OpencodeEvent): {
   id: string;
   sessionId: string;
@@ -413,6 +480,8 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
       details?: string;
     }) => Promise<"once" | "always" | "reject">;
   }): Promise<{ sessionId?: string; text: string; activity?: string[]; attachments?: OutboundAttachment[] }> => {
+    const collectAutoAttachments = shouldCollectAutomaticAttachments();
+    const injectBridgeToolsPrompt = shouldInjectBridgeToolPrompt();
     const { client } = await ensureContext();
     const cwd = input.cwd;
     let resolvedCwd = cwd || process.cwd();
@@ -424,11 +493,15 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
       throwOnError: true,
     });
 
+    const promptText = injectBridgeToolsPrompt
+      ? `${buildBridgeToolsPreamble()}\n\nUser request:\n${input.prompt}`
+      : input.prompt;
+
     await client.session.promptAsync({
       path: { id: sid },
       ...(cwd ? { query: { directory: cwd } } : {}),
       body: {
-        parts: [{ type: "text", text: input.prompt }],
+        parts: [{ type: "text", text: promptText }],
       },
       throwOnError: true,
     });
@@ -491,7 +564,7 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
         continue;
       }
 
-      if (payload.properties) {
+      if (collectAutoAttachments && payload.properties) {
         for (const candidate of extractPathsFromUnknown(payload.properties)) {
           deferredAttachmentCandidates.add(candidate);
         }
@@ -536,33 +609,35 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
           }
 
           if (part.state.status === "completed") {
-            for (const filePart of part.state.attachments || []) {
-              const sourcePath = filePart.source?.type === "file" ? filePart.source.path : undefined;
-              const fromSource = sourcePath ? await resolveAttachment(sourcePath, resolvedCwd, filePart.mime) : undefined;
-              if (fromSource) {
-                attachments.set(fromSource.filePath, fromSource);
+            if (collectAutoAttachments) {
+              for (const filePart of part.state.attachments || []) {
+                const sourcePath = filePart.source?.type === "file" ? filePart.source.path : undefined;
+                const fromSource = sourcePath ? await resolveAttachment(sourcePath, resolvedCwd, filePart.mime) : undefined;
+                if (fromSource) {
+                  attachments.set(fromSource.filePath, fromSource);
+                }
               }
-            }
 
-            const output = part.state.output || "";
-            for (const candidate of extractCandidatePaths(output)) {
-              const resolved = await resolveAttachment(candidate, resolvedCwd);
-              if (resolved) {
-                attachments.set(resolved.filePath, resolved);
+              const output = part.state.output || "";
+              for (const candidate of extractCandidatePaths(output)) {
+                const resolved = await resolveAttachment(candidate, resolvedCwd);
+                if (resolved) {
+                  attachments.set(resolved.filePath, resolved);
+                }
               }
-            }
 
-            const metadata = part.state.metadata as Record<string, unknown> | undefined;
-            const metadataPathCandidates = [metadata?.filepath, metadata?.filePath, metadata?.path, metadata?.outputPath].filter(
-              (value): value is string => typeof value === "string" && value.length > 0,
-            );
-            const nestedMetadataCandidates = metadata ? [...extractPathsFromUnknown(metadata)] : [];
-            const allMetadataCandidates = [...new Set([...metadataPathCandidates, ...nestedMetadataCandidates])];
-            for (const candidate of allMetadataCandidates) {
-              const resolved = await resolveAttachment(candidate, resolvedCwd);
-              if (resolved) {
-                logger.info({ sessionId: sid, filePath: resolved.filePath, source: "tool-metadata" }, "[bui] Collected attachment candidate from tool metadata.");
-                attachments.set(resolved.filePath, resolved);
+              const metadata = part.state.metadata as Record<string, unknown> | undefined;
+              const metadataPathCandidates = [metadata?.filepath, metadata?.filePath, metadata?.path, metadata?.outputPath].filter(
+                (value): value is string => typeof value === "string" && value.length > 0,
+              );
+              const nestedMetadataCandidates = metadata ? [...extractPathsFromUnknown(metadata)] : [];
+              const allMetadataCandidates = [...new Set([...metadataPathCandidates, ...nestedMetadataCandidates])];
+              for (const candidate of allMetadataCandidates) {
+                const resolved = await resolveAttachment(candidate, resolvedCwd);
+                if (resolved) {
+                  logger.info({ sessionId: sid, filePath: resolved.filePath, source: "tool-metadata" }, "[bui] Collected attachment candidate from tool metadata.");
+                  attachments.set(resolved.filePath, resolved);
+                }
               }
             }
           }
@@ -636,7 +711,7 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
           }
         }
 
-        if (permission.filePathCandidate) {
+        if (collectAutoAttachments && permission.filePathCandidate) {
           deferredAttachmentCandidates.add(permission.filePathCandidate);
         }
         continue;
@@ -655,22 +730,37 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
 
     const latestAssistantMessageId = assistantMessageIds[assistantMessageIds.length - 1];
     const targetParts = latestAssistantMessageId ? textPartsByMessageId.get(latestAssistantMessageId) : undefined;
-    const text = targetParts
+    let text = targetParts
       ? [...targetParts.values()].join("").trim()
       : [...textPartsByMessageId.values()].flatMap((parts) => [...parts.values()]).join("").trim();
 
-    for (const candidate of extractCandidatePaths(text)) {
-      const resolved = await resolveAttachment(candidate, resolvedCwd);
+    const directiveParse = parseBridgeAttachmentDirectives(text);
+    text = directiveParse.cleanText;
+
+    for (const directive of directiveParse.directives) {
+      const resolved = await resolveAttachment(directive.pathLike, resolvedCwd);
       if (resolved) {
-        attachments.set(resolved.filePath, resolved);
+        const withCaption = directive.caption
+          ? { ...resolved, caption: directive.caption }
+          : resolved;
+        attachments.set(resolved.filePath, withCaption);
       }
     }
 
-    for (const candidate of deferredAttachmentCandidates) {
-      const resolved = await resolveAttachment(candidate, resolvedCwd);
-      if (resolved) {
-        logger.info({ sessionId: sid, filePath: resolved.filePath, source: "event-metadata" }, "[bui] Collected deferred attachment candidate from event metadata.");
-        attachments.set(resolved.filePath, resolved);
+    if (collectAutoAttachments) {
+      for (const candidate of extractCandidatePaths(text)) {
+        const resolved = await resolveAttachment(candidate, resolvedCwd);
+        if (resolved) {
+          attachments.set(resolved.filePath, resolved);
+        }
+      }
+
+      for (const candidate of deferredAttachmentCandidates) {
+        const resolved = await resolveAttachment(candidate, resolvedCwd);
+        if (resolved) {
+          logger.info({ sessionId: sid, filePath: resolved.filePath, source: "event-metadata" }, "[bui] Collected deferred attachment candidate from event metadata.");
+          attachments.set(resolved.filePath, resolved);
+        }
       }
     }
 
