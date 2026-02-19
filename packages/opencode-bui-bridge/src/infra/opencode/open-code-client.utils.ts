@@ -386,6 +386,7 @@ async function createSdkContext(options: ClientBootstrapOptions): Promise<SdkCon
 
 export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeClient {
   let contextPromise: Promise<SdkContext> | undefined;
+  const bridgeGuidanceSeededSessions = new Set<string>();
 
   const ensureContext = async (): Promise<SdkContext> => {
     if (!contextPromise) {
@@ -457,9 +458,15 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
       throwOnError: true,
     });
 
-    const promptText = injectBridgeToolsPrompt
+    const shouldInjectPromptGuidance = injectBridgeToolsPrompt && !bridgeGuidanceSeededSessions.has(sid);
+    const promptText = shouldInjectPromptGuidance
       ? `${buildBridgeToolsPreamble()}\n\nUser request:\n${input.prompt}`
       : input.prompt;
+
+    if (shouldInjectPromptGuidance) {
+      bridgeGuidanceSeededSessions.add(sid);
+      logger.info({ sessionId: sid }, "[bui] Injected one-time bridge tool guidance for session.");
+    }
 
     await client.session.promptAsync({
       path: { id: sid },

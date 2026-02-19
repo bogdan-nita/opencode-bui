@@ -168,10 +168,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const parsePermissionResponseFromText = (
     envelope: InboundEnvelope,
   ): { permissionId: string; response: "once" | "always" | "reject" } | undefined => {
-    if (envelope.event.type !== "text") {
+    const slash = envelope.event.type === "slash"
+      ? { command: envelope.event.command, args: envelope.event.args }
+      : envelope.event.type === "text"
+        ? splitCommand(envelope.event.text)
+        : undefined;
+    if (!slash) {
       return undefined;
     }
-    const slash = splitCommand(envelope.event.text);
     if (slash.command !== "permit" && slash.command !== "permission") {
       return undefined;
     }
@@ -657,6 +661,15 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     permissionId: string,
     response: "once" | "always" | "reject",
   ): Promise<boolean> => {
+    logger.info({
+      bridgeId: envelope.bridgeId,
+      conversation: key,
+      permissionId,
+      response,
+      actorUserId: envelope.user.id,
+      pendingPermissionIds: [...pendingPermissions.keys()],
+    }, "[bui] Resolving permission decision.");
+
     const record = await permissionStore.getById(permissionId);
     if (!record) {
       await bridge.send({
@@ -667,6 +680,16 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       logger.warn({ bridgeId: envelope.bridgeId, conversation: key, permissionId }, "[bui] Permission response for unknown id.");
       return true;
     }
+
+    logger.info({
+      bridgeId: envelope.bridgeId,
+      conversation: key,
+      permissionId,
+      recordStatus: record.status,
+      recordConversation: record.conversationKey,
+      recordRequester: record.requesterUserId,
+      expiresAtUnixSeconds: record.expiresAtUnixSeconds,
+    }, "[bui] Loaded permission record for decision.");
 
     if (record.conversationKey !== key) {
       await bridge.send({
@@ -689,6 +712,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     }
 
     const resolution = await permissionStore.resolvePending({ permissionId, response });
+    logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId, response, resolution }, "[bui] Permission store resolution result.");
     if (resolution === "expired") {
       await bridge.send({
         bridgeId: envelope.bridgeId,
