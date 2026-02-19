@@ -12,8 +12,11 @@
 In-chat runtime controls:
 
 - `/interrupt` (or `/interupt`) cancels the active OpenCode run for that conversation.
+- `/context` shows active run/session/workspace details, attach mode, and pending permission count.
 - While a run is active, BUI streams OpenCode activity updates live to the bridge.
 - Permission prompts from OpenCode are routed to bridge buttons (`Allow Once`, `Always Allow`, `Reject`).
+- Permission decisions are conversation-bound and requester-bound.
+- Inbound media messages are downloaded, stored under runtime uploads, and analyzed through OpenCode.
 
 Bridge command registration includes native BUI commands plus command markdown files discovered from current OpenCode config directories (`commands/` or `.opencode/commands/`).
 
@@ -45,6 +48,12 @@ Bridge command registration includes native BUI commands plus command markdown f
 - Set `OPENCODE_ATTACH_URL` to route all BUI-run sessions through a running OpenCode server.
 - This enables a hybrid mode where BUI uses OpenCode server-side context/plugins while keeping bridge orchestration in BUI.
 - Default is off; when `OPENCODE_ATTACH_URL` is unset, BUI starts an embedded OpenCode SDK server for local runs.
+
+## Attachment safety limits
+
+- `BUI_MAX_ATTACHMENTS_PER_MESSAGE` (default `6`) limits outbound attachment count per message.
+- `BUI_MAX_ATTACHMENT_BYTES` (default `10485760`) skips outbound attachments larger than the limit.
+- When files are skipped, BUI posts a reason in chat.
 
 ## Screenshot support
 

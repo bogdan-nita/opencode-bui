@@ -10,6 +10,7 @@ It currently supports Telegram and Discord bridges (enabled per config).
 - One Telegram chat maps to one OpenCode session for predictable conversational context.
 - Slash parity: unknown slash commands are forwarded to OpenCode (`/help`, `/init`, `/undo`, `/redo`, and more).
 - BUI-native operations: `/new`, `/cd`, `/cwd`, `/session`, `/screenshot`, `/reload`, `/pid`, `/health`, `/agent ...`.
+- Runtime visibility command: `/context` for active run, session/workspace, attach mode, and pending permissions.
 - Local-first runtime with LibSQL + Drizzle storage and configurable runtime directories.
 - Offline backlog handling and media forwarding support.
 
@@ -96,6 +97,8 @@ Common environment variables:
 - `OPENCODE_ATTACH_URL` (optional)
 - `BUI_RUNTIME_DIR` (optional, default `~/.config/opencode/bui`)
 - `BUI_DB_PATH` (optional)
+- `BUI_MAX_ATTACHMENTS_PER_MESSAGE` (optional, default `6`)
+- `BUI_MAX_ATTACHMENT_BYTES` (optional, default `10485760`)
 
 ## Development
 

@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import { stat } from "node:fs/promises";
 import { createOpenCodeClient } from "@infra/opencode/open-code-client.utils.js";
 import { discoverOpencodeCommands, mergeBridgeCommands } from "@infra/opencode/opencode-commands.utils.js";
 import { createSystemClock } from "@infra/time/system-clock.utils.js";
@@ -6,6 +7,7 @@ import { logger } from "@infra/runtime/logger.utils.js";
 import { createBuiDb } from "@infra/db/db.utils.js";
 import { createLibsqlSessionStore } from "@infra/store/libsql-session-store.utils.js";
 import { createLibsqlAgentStore } from "@infra/store/libsql-agent-store.utils.js";
+import { createFileMediaStore } from "@infra/store/file-media-store.utils.js";
 import { captureScreenshot } from "./media-coordinator.utils.js";
 import { conversationKey } from "./conversation-router.utils.js";
 import { chooseBacklogMessages, isBacklogMessage } from "./backlog-coordinator.utils.js";
@@ -23,6 +25,7 @@ const nativeCommands = [
   { command: "cd", description: "Change workspace" },
   { command: "cwd", description: "Show workspace" },
   { command: "session", description: "Show mapped session" },
+  { command: "context", description: "Show run and attach context" },
   { command: "interrupt", description: "Interrupt active OpenCode run" },
   { command: "screenshot", description: "Capture and analyze screenshot" },
   { command: "reload", description: "Reload config" },
@@ -42,6 +45,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
   const sessionStore = createLibsqlSessionStore(database);
   const agentStore = createLibsqlAgentStore(database);
+  const mediaStore = createFileMediaStore(input.config.paths.uploadDir);
   const openCodeClient = createOpenCodeClient({
     opencodeBin: input.config.opencodeBin,
     ...(input.config.opencodeAttachUrl ? { attachUrl: input.config.opencodeAttachUrl } : {}),
@@ -56,6 +60,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
   const permissionTimeoutMs = Number.isFinite(permissionTimeoutMsRaw) && permissionTimeoutMsRaw > 0 ? permissionTimeoutMsRaw : 600000;
   const pendingPermissions = new Map<string, {
     conversationKey: string;
+    requesterUserId: string;
     buttonKey: string;
     resolve: (response: "once" | "always" | "reject") => void;
     timer: ReturnType<typeof setTimeout>;
@@ -106,21 +111,76 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     return { permissionId, response };
   };
 
+  const parseSlashCommand = (envelope: InboundEnvelope): { command: string; args: string } | undefined => {
+    if (envelope.event.type === "slash") {
+      return { command: envelope.event.command, args: envelope.event.args };
+    }
+    if (envelope.event.type === "text" && envelope.event.text.trim().startsWith("/")) {
+      return splitCommand(envelope.event.text);
+    }
+    return undefined;
+  };
+
   const processEnvelope = async (bridge: (typeof input.bridges)[number], envelope: InboundEnvelope): Promise<void> => {
     const key = conversationKey(envelope.conversation);
     const controller = new AbortController();
     activeRuns.set(key, controller);
     logger.info({ bridgeId: envelope.bridgeId, conversation: key, eventType: envelope.event.type }, "[bui] Processing inbound envelope.");
 
+    const activityFlushIntervalMsRaw = Number.parseInt(process.env.BUI_ACTIVITY_FLUSH_INTERVAL_MS || "1200", 10);
+    const activityFlushIntervalMs = Number.isFinite(activityFlushIntervalMsRaw) && activityFlushIntervalMsRaw > 0
+      ? activityFlushIntervalMsRaw
+      : 1200;
+    const maxActivityLinesPerFlushRaw = Number.parseInt(process.env.BUI_ACTIVITY_LINES_PER_MESSAGE || "8", 10);
+    const maxActivityLinesPerFlush = Number.isFinite(maxActivityLinesPerFlushRaw) && maxActivityLinesPerFlushRaw > 0
+      ? maxActivityLinesPerFlushRaw
+      : 8;
+    const activityQueue: string[] = [];
+    let flushTimer: ReturnType<typeof setTimeout> | undefined;
+    let flushing = Promise.resolve();
+
+    const flushActivity = async (): Promise<void> => {
+      if (activityQueue.length === 0) {
+        return;
+      }
+      const lines = activityQueue.splice(0, maxActivityLinesPerFlush);
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: ["OpenCode activity:", ...lines.map((line) => `- ${line}`)].join("\n"),
+      });
+      if (activityQueue.length > 0) {
+        flushing = flushing.then(() => flushActivity());
+      }
+    };
+
+    const scheduleActivityFlush = () => {
+      if (flushTimer) {
+        return;
+      }
+      flushTimer = setTimeout(() => {
+        flushTimer = undefined;
+        flushing = flushing.then(() => flushActivity());
+      }, activityFlushIntervalMs);
+    };
+
+    const slash = parseSlashCommand(envelope);
+    const silentStartCommands = new Set(["start", "pid", "interrupt", "interupt", "reload", "health", "session", "cwd", "context"]);
+    const shouldAnnounceStart = !slash || !silentStartCommands.has(slash.command);
+    if (shouldAnnounceStart) {
+      await bridge.send({
+        bridgeId: envelope.bridgeId,
+        conversation: envelope.conversation,
+        text: "OpenCode run started.",
+      });
+    }
+
     const program = routeInbound(envelope, {
       signal: controller.signal,
       onActivity: async (line) => {
         logger.info({ bridgeId: envelope.bridgeId, conversation: key, activity: line }, "[bui] OpenCode activity event.");
-        await bridge.send({
-          bridgeId: envelope.bridgeId,
-          conversation: envelope.conversation,
-          text: `> ${line}`,
-        });
+        activityQueue.push(line);
+        scheduleActivityFlush();
       },
       onPermissionRequest: async (permission) => {
         logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, type: permission.type }, "[bui] Permission request received from OpenCode.");
@@ -131,6 +191,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           `- Request ID: ${permission.id}`,
           `- Title: ${permission.title}`,
           `- Type: ${permission.type}`,
+          `- Requester: ${envelope.user.id}`,
           ...(permission.pattern ? [`- Pattern: ${permission.pattern}`] : []),
           ...(permission.details ? [`- Details: ${permission.details}`] : []),
           `- Expires in: ${Math.ceil(permissionTimeoutMs / 1000)}s`,
@@ -177,6 +238,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
           pendingPermissions.set(permission.id, {
             conversationKey: key,
+            requesterUserId: envelope.user.id,
             buttonKey,
             resolve: (response) => {
               clearTimeout(timer);
@@ -216,7 +278,19 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     let outbound;
     try {
       outbound = await Effect.runPromise(withServices);
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
+      }
+      await flushing;
+      await flushActivity();
     } catch (error) {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
+      }
+      await flushing;
+      await flushActivity();
       const message = error instanceof Error
         ? error.message
         : typeof error === "string"
@@ -253,6 +327,11 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     }
 
     logger.info({ bridgeId: envelope.bridgeId, conversation: key, outboundCount: outbound.length }, "[bui] Outbound responses generated.");
+    const maxAttachmentsRaw = Number.parseInt(process.env.BUI_MAX_ATTACHMENTS_PER_MESSAGE || "6", 10);
+    const maxAttachmentsPerMessage = Number.isFinite(maxAttachmentsRaw) && maxAttachmentsRaw > 0 ? maxAttachmentsRaw : 6;
+    const maxAttachmentBytesRaw = Number.parseInt(process.env.BUI_MAX_ATTACHMENT_BYTES || "10485760", 10);
+    const maxAttachmentBytes = Number.isFinite(maxAttachmentBytesRaw) && maxAttachmentBytesRaw > 0 ? maxAttachmentBytesRaw : 10485760;
+
     for (const message of outbound) {
       logger.info(
         {
@@ -265,8 +344,45 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
         },
         "[bui] Sending outbound message to bridge.",
       );
+
+      let sanitizedMessage = message;
+      if (message.attachments && message.attachments.length > 0) {
+        const kept = [] as NonNullable<typeof message.attachments>;
+        const skipped: string[] = [];
+        for (const attachment of message.attachments.slice(0, maxAttachmentsPerMessage)) {
+          let size = -1;
+          try {
+            const details = await stat(attachment.filePath);
+            size = details.size;
+          } catch {
+            skipped.push(`${attachment.filePath} (missing)`);
+            continue;
+          }
+          if (size > maxAttachmentBytes) {
+            skipped.push(`${attachment.filePath} (too large)`);
+            continue;
+          }
+          kept.push(attachment);
+        }
+        if (message.attachments.length > maxAttachmentsPerMessage) {
+          skipped.push(`${message.attachments.length - maxAttachmentsPerMessage} attachment(s) omitted by limit`);
+        }
+        sanitizedMessage = kept.length > 0 ? { ...message, attachments: kept } : (() => {
+          const withoutAttachments = { ...message };
+          delete withoutAttachments.attachments;
+          return withoutAttachments;
+        })();
+        if (skipped.length > 0) {
+          await bridge.send({
+            bridgeId: envelope.bridgeId,
+            conversation: envelope.conversation,
+            text: ["Some attachments were skipped:", ...skipped.map((line) => `- ${line}`)].join("\n"),
+          });
+        }
+      }
+
       try {
-        await bridge.send(message);
+        await bridge.send(sanitizedMessage);
         logger.info({ bridgeId: envelope.bridgeId, conversation: key }, "[bui] Outbound message sent.");
       } catch (error) {
         logger.error({ error, bridgeId: bridge.id }, "[bui] Failed to send outbound message.");
@@ -400,6 +516,30 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           return;
         }
 
+        const slash = parseSlashCommand(envelope);
+        if (slash?.command === "context") {
+          const mapping = await sessionStore.getSessionByConversation(envelope.conversation);
+          const pendingForConversation = [...pendingPermissions.entries()]
+            .filter(([, pending]) => pending.conversationKey === key)
+            .map(([permissionId]) => permissionId);
+          await bridge.send({
+            bridgeId: envelope.bridgeId,
+            conversation: envelope.conversation,
+            text: [
+              "Runtime context",
+              `- Bridge: ${envelope.bridgeId}`,
+              `- Conversation: ${key}`,
+              `- Active run: ${activeRuns.has(key) ? "yes" : "no"}`,
+              `- Session: ${mapping?.sessionId || "none"}`,
+              `- Workspace: ${mapping?.cwd || "global default"}`,
+              `- OpenCode attach mode: ${input.config.opencodeAttachUrl ? "remote" : "embedded"}`,
+              ...(input.config.opencodeAttachUrl ? [`- OpenCode attach URL: ${input.config.opencodeAttachUrl}`] : []),
+              `- Pending permissions: ${pendingForConversation.length}`,
+            ].join("\n"),
+          });
+          return;
+        }
+
         const permissionFromText = parsePermissionResponseFromText(envelope);
         if (permissionFromText) {
           logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permissionFromText.permissionId, response: permissionFromText.response }, "[bui] Permission response received from text command.");
@@ -409,6 +549,22 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
               bridgeId: envelope.bridgeId,
               conversation: envelope.conversation,
               text: "No pending permission with that id.",
+            });
+            return;
+          }
+          if (pending.conversationKey !== key) {
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Permission request belongs to another conversation.",
+            });
+            return;
+          }
+          if (pending.requesterUserId !== envelope.user.id) {
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Only the requester can resolve this permission.",
             });
             return;
           }
@@ -485,6 +641,21 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
           if (pending.conversationKey !== key) {
             logger.warn({ bridgeId: envelope.bridgeId, conversation: key, expectedConversation: pending.conversationKey, permissionId: mappedPermissionId }, "[bui] Permission response conversation mismatch.");
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Permission request belongs to another conversation.",
+            });
+            return;
+          }
+
+          if (pending.requesterUserId !== envelope.user.id) {
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Only the requester can resolve this permission.",
+            });
+            return;
           }
 
           pending.resolve(response);
@@ -503,6 +674,62 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
             conversation: envelope.conversation,
             text: "Another run is in progress. Use /interrupt to cancel it first.",
           });
+          return;
+        }
+
+        if (envelope.event.type === "media") {
+          if (activeRuns.has(key)) {
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Another run is in progress. Use /interrupt to cancel it first.",
+            });
+            return;
+          }
+          if (!bridge.downloadMedia) {
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Media download is not configured for this bridge yet.",
+            });
+            return;
+          }
+
+          try {
+            const mediaEnvelope = envelope as InboundEnvelope & { event: { type: "media"; fileId: string; fileName?: string; mimeType?: string } };
+            const downloaded = await bridge.downloadMedia(mediaEnvelope);
+            const storedPath = await mediaStore.saveRemoteFile({
+              bridgeId: envelope.bridgeId,
+              conversationId: key,
+              ...(envelope.event.fileName || downloaded.fileNameHint ? { fileNameHint: envelope.event.fileName || downloaded.fileNameHint } : {}),
+              bytes: downloaded.bytes,
+            });
+
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Media received. Starting analysis...",
+            });
+
+            await processEnvelope(bridge, {
+              ...envelope,
+              event: {
+                type: "text",
+                text: [
+                  `User uploaded a ${envelope.event.mediaKind} file at ${storedPath}.`,
+                  ...(envelope.event.caption ? [`Caption: ${envelope.event.caption}`] : []),
+                  "Analyze the file and help the user based on it.",
+                ].join("\n"),
+              },
+            });
+          } catch (error) {
+            logger.error({ error, bridgeId: envelope.bridgeId }, "[bui] Media processing failed.");
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "Could not download or process media for analysis.",
+            });
+          }
           return;
         }
 

@@ -1,4 +1,5 @@
 import { Bot } from "grammy";
+import { basename } from "node:path";
 import type { RuntimeConfig } from "@infra/config/config.types.js";
 import type { BridgeAdapter, BridgeCommandDescriptor, BridgeRuntimeHandlers } from "@core/ports/bridge-adapter.types.js";
 import type { OutboundEnvelope } from "@core/domain/envelope.types.js";
@@ -28,6 +29,23 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
   let handlers: BridgeRuntimeHandlers | undefined;
   let started = false;
   let startError: string | undefined;
+
+  const downloadTelegramFile = async (fileId: string): Promise<{ bytes: Uint8Array; fileNameHint?: string }> => {
+    const file = await bot.api.getFile(fileId);
+    if (!file.file_path) {
+      throw new Error("Telegram did not return file_path for media download.");
+    }
+    const url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Telegram file download failed: HTTP ${response.status}`);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return {
+      bytes,
+      ...(file.file_path ? { fileNameHint: basename(file.file_path) } : {}),
+    };
+  };
 
   const safeAnswerCallbackQuery = async (
     ctx: { answerCallbackQuery: (options?: { text?: string; show_alert?: boolean; cache_time?: number }) => Promise<unknown> },
@@ -118,6 +136,108 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
             type: "media",
             mediaKind: "image",
             fileId: largest.file_id,
+            fileName: `${largest.file_unique_id}.jpg`,
+          },
+        });
+      });
+
+      bot.on("message:document", async (ctx) => {
+        if (!handlers) {
+          return;
+        }
+        const userId = ctx.from?.id;
+        if (!userId) {
+          return;
+        }
+        if (!isUserAllowed(config, userId, ctx.from?.username)) {
+          logger.warn({ userId, username: ctx.from?.username }, "[bui] Telegram media blocked by allowlist.");
+          return;
+        }
+        const document = ctx.message.document;
+        if (!document) {
+          return;
+        }
+
+        await handlers.onInbound({
+          bridgeId: "telegram",
+          conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
+          channel: { id: String(ctx.chat.id), kind: "dm" },
+          user: { id: String(userId), ...(ctx.from?.username ? { username: ctx.from.username } : {}) },
+          receivedAtUnixSeconds: ctx.message.date,
+          event: {
+            type: "media",
+            mediaKind: "document",
+            fileId: document.file_id,
+            ...(document.file_name ? { fileName: document.file_name } : {}),
+            ...(document.mime_type ? { mimeType: document.mime_type } : {}),
+            ...(ctx.message.caption ? { caption: ctx.message.caption } : {}),
+          },
+        });
+      });
+
+      bot.on("message:video", async (ctx) => {
+        if (!handlers) {
+          return;
+        }
+        const userId = ctx.from?.id;
+        if (!userId) {
+          return;
+        }
+        if (!isUserAllowed(config, userId, ctx.from?.username)) {
+          logger.warn({ userId, username: ctx.from?.username }, "[bui] Telegram media blocked by allowlist.");
+          return;
+        }
+        const video = ctx.message.video;
+        if (!video) {
+          return;
+        }
+
+        await handlers.onInbound({
+          bridgeId: "telegram",
+          conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
+          channel: { id: String(ctx.chat.id), kind: "dm" },
+          user: { id: String(userId), ...(ctx.from?.username ? { username: ctx.from.username } : {}) },
+          receivedAtUnixSeconds: ctx.message.date,
+          event: {
+            type: "media",
+            mediaKind: "video",
+            fileId: video.file_id,
+            ...(video.mime_type ? { mimeType: video.mime_type } : {}),
+            ...(ctx.message.caption ? { caption: ctx.message.caption } : {}),
+          },
+        });
+      });
+
+      bot.on("message:audio", async (ctx) => {
+        if (!handlers) {
+          return;
+        }
+        const userId = ctx.from?.id;
+        if (!userId) {
+          return;
+        }
+        if (!isUserAllowed(config, userId, ctx.from?.username)) {
+          logger.warn({ userId, username: ctx.from?.username }, "[bui] Telegram media blocked by allowlist.");
+          return;
+        }
+        const audio = ctx.message.audio;
+        if (!audio) {
+          return;
+        }
+
+        await handlers.onInbound({
+          bridgeId: "telegram",
+          conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
+          channel: { id: String(ctx.chat.id), kind: "dm" },
+          user: { id: String(userId), ...(ctx.from?.username ? { username: ctx.from.username } : {}) },
+          receivedAtUnixSeconds: ctx.message.date,
+          event: {
+            type: "media",
+            mediaKind: "audio",
+            fileId: audio.file_id,
+            ...(audio.file_name ? { fileName: audio.file_name } : {}),
+            ...(audio.mime_type ? { mimeType: audio.mime_type } : {}),
+            ...(ctx.message.caption ? { caption: ctx.message.caption } : {}),
           },
         });
       });
@@ -188,6 +308,14 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
     },
     async send(envelope: OutboundEnvelope) {
       await sendOutboundViaTelegram(bot, envelope, config.bridges.telegram.formatting.maxChunkChars);
+    },
+    async downloadMedia(envelope) {
+      const result = await downloadTelegramFile(envelope.event.fileId);
+      return {
+        bytes: result.bytes,
+        ...(envelope.event.fileName || result.fileNameHint ? { fileNameHint: envelope.event.fileName || result.fileNameHint } : {}),
+        ...(envelope.event.mimeType ? { mimeType: envelope.event.mimeType } : {}),
+      };
     },
     async setCommands(commands: BridgeCommandDescriptor[]) {
       if (!config.bridges.telegram.commands.registerOnStart) {

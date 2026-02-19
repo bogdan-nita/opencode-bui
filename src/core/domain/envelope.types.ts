@@ -16,6 +16,7 @@ export type InboundMediaEvent = {
   type: "media";
   mediaKind: "image" | "audio" | "video" | "document";
   fileId: string;
+  fileName?: string;
   mimeType?: string;
   caption?: string;
 };

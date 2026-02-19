@@ -18,12 +18,12 @@ import type { OutboundEnvelope } from "@core/domain/envelope.types.js";
 import { logger } from "@infra/runtime/logger.utils.js";
 
 export type DiscordCommandRestClient = {
-  put: (route: string, options: { body: unknown }) => Promise<unknown>;
+  put: (route: `/${string}`, options: { body: unknown }) => Promise<unknown>;
 };
 
 export type DiscordCommandRoutes = {
-  applicationCommands: (applicationId: string) => string;
-  applicationGuildCommands: (applicationId: string, guildId: string) => string;
+  applicationCommands: (applicationId: string) => `/${string}`;
+  applicationGuildCommands: (applicationId: string, guildId: string) => `/${string}`;
 };
 
 function toConversation(channelId: string, threadId?: string) {
@@ -157,6 +157,7 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
               type: "media",
               mediaKind,
               fileId: attachment.url,
+              ...(attachment.name ? { fileName: attachment.name } : {}),
               ...(attachment.contentType ? { mimeType: attachment.contentType } : {}),
               ...(message.content ? { caption: message.content } : {}),
             },
@@ -277,14 +278,25 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
       );
 
       const chunks = envelope.chunks && envelope.chunks.length > 0 ? envelope.chunks : envelope.text ? [envelope.text] : [""];
-      for (const chunk of chunks) {
+      for (const [idx, chunk] of chunks.entries()) {
         const payload = {
           ...(chunk ? { content: chunk } : {}),
-          ...(files.length > 0 ? { files } : {}),
+          ...(idx === 0 && files.length > 0 ? { files } : {}),
           ...(rows.length > 0 ? { components: rows } : {}),
         };
         await channel.send(payload);
       }
+    },
+    async downloadMedia(envelope) {
+      const response = await fetch(envelope.event.fileId);
+      if (!response.ok) {
+        throw new Error(`Discord media download failed: HTTP ${response.status}`);
+      }
+      return {
+        bytes: new Uint8Array(await response.arrayBuffer()),
+        ...(envelope.event.fileName ? { fileNameHint: envelope.event.fileName } : {}),
+        ...(envelope.event.mimeType ? { mimeType: envelope.event.mimeType } : {}),
+      };
     },
     async setCommands(commands: BridgeCommandDescriptor[]) {
       await registerDiscordCommands(config, commands, rest, Routes);

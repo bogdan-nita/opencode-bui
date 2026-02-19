@@ -17,6 +17,7 @@ const inboundMediaEventSchema = z.object({
   type: z.literal("media"),
   mediaKind: z.enum(["image", "audio", "video", "document"]),
   fileId: z.string(),
+  fileName: z.string().optional(),
   mimeType: z.string().optional(),
   caption: z.string().optional(),
 });

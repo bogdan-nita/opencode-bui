@@ -22,6 +22,11 @@ export type BridgeAdapter = {
   start: (handlers: BridgeRuntimeHandlers) => Promise<void>;
   stop: () => Promise<void>;
   send: (envelope: OutboundEnvelope) => Promise<void>;
+  downloadMedia?: (envelope: InboundEnvelope & { event: { type: "media"; fileId: string; fileName?: string; mimeType?: string } }) => Promise<{
+    bytes: Uint8Array;
+    fileNameHint?: string;
+    mimeType?: string;
+  }>;
   setCommands: (commands: BridgeCommandDescriptor[]) => Promise<void>;
   health: () => Promise<BridgeHealth>;
 };

@@ -40,8 +40,8 @@ describe("registerDiscordCommands", () => {
   it("registers commands with global route", async () => {
     const config = createConfig();
     const put = vi.fn(async () => undefined);
-    const applicationCommands = vi.fn((applicationId: string) => `global:${applicationId}`);
-    const applicationGuildCommands = vi.fn((applicationId: string, guildId: string) => `guild:${applicationId}:${guildId}`);
+    const applicationCommands = vi.fn((applicationId: string) => `/global:${applicationId}` as const);
+    const applicationGuildCommands = vi.fn((applicationId: string, guildId: string) => `/guild:${applicationId}:${guildId}` as const);
 
     await registerDiscordCommands(
       config,
@@ -53,7 +53,7 @@ describe("registerDiscordCommands", () => {
     expect(applicationCommands).toHaveBeenCalledWith("app-1");
     expect(applicationGuildCommands).not.toHaveBeenCalled();
     expect(put).toHaveBeenCalledTimes(1);
-    expect(put).toHaveBeenCalledWith("global:app-1", expect.objectContaining({ body: expect.any(Array) }));
+    expect(put).toHaveBeenCalledWith("/global:app-1", expect.objectContaining({ body: expect.any(Array) }));
   });
 
   it("registers commands with guild route when guild scope is configured", async () => {
@@ -62,8 +62,8 @@ describe("registerDiscordCommands", () => {
     config.bridges.discord.defaultGuildId = "guild-1";
 
     const put = vi.fn(async () => undefined);
-    const applicationCommands = vi.fn((applicationId: string) => `global:${applicationId}`);
-    const applicationGuildCommands = vi.fn((applicationId: string, guildId: string) => `guild:${applicationId}:${guildId}`);
+    const applicationCommands = vi.fn((applicationId: string) => `/global:${applicationId}` as const);
+    const applicationGuildCommands = vi.fn((applicationId: string, guildId: string) => `/guild:${applicationId}:${guildId}` as const);
 
     await registerDiscordCommands(
       config,
@@ -74,6 +74,6 @@ describe("registerDiscordCommands", () => {
 
     expect(applicationGuildCommands).toHaveBeenCalledWith("app-1", "guild-1");
     expect(applicationCommands).not.toHaveBeenCalled();
-    expect(put).toHaveBeenCalledWith("guild:app-1:guild-1", expect.objectContaining({ body: expect.any(Array) }));
+    expect(put).toHaveBeenCalledWith("/guild:app-1:guild-1", expect.objectContaining({ body: expect.any(Array) }));
   });
 });

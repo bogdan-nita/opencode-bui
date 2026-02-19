@@ -111,11 +111,15 @@ export function routeInbound(
           envelope,
             [
               "OpenCode BUI is active.",
-              "Native commands: /new, /cd, /cwd, /session, /agent, /interrupt, /screenshot, /reload, /health, /pid.",
+              "Native commands: /new, /cd, /cwd, /session, /context, /agent, /interrupt, /screenshot, /reload, /health, /pid.",
               "Other slash commands are forwarded to OpenCode.",
             ].join("\n"),
         ),
       ];
+    }
+
+    if (slash?.command === "context") {
+      return [textReply(envelope, "Context details are handled by runtime. Use /context in chat to inspect current run state.")];
     }
 
     if (slash?.command === "pid") {
