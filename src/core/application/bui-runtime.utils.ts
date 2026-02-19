@@ -52,6 +52,14 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     opencodeBin: input.config.opencodeBin,
     ...(input.config.opencodeAttachUrl ? { attachUrl: input.config.opencodeAttachUrl } : {}),
   });
+  if (process.env.BUI_OPENCODE_EAGER_START !== "0" && openCodeClient.warmup) {
+    try {
+      await openCodeClient.warmup();
+      logger.info("[bui] OpenCode context warmed during runtime startup.");
+    } catch (error) {
+      logger.warn({ error }, "[bui] OpenCode warmup failed; runtime will retry on first request.");
+    }
+  }
   const clock = createSystemClock();
   const pendingBacklog = new Map<string, InboundEnvelope[]>();
   const backlogTimers = new Map<string, ReturnType<typeof setTimeout>>();

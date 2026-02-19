@@ -26,6 +26,11 @@ In-chat runtime controls:
 - Default is `900` seconds.
 - On timeout, mapping is cleared; the next message starts a fresh mapped session.
 
+## OpenCode startup behavior
+
+- `BUI_OPENCODE_EAGER_START=1` (default) pre-warms OpenCode SDK context during BUI startup.
+- This shifts startup cost to boot time and reduces first-message latency in chat.
+
 Bridge command registration includes native BUI commands plus command markdown files discovered from current OpenCode config directories (`commands/` or `.opencode/commands/`).
 
 ## Quality gates

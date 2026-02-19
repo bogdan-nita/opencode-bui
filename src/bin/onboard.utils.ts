@@ -112,6 +112,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "BUI_SESSION_IDLE_TIMEOUT_SECONDS=900",
     "BUI_AUTO_ATTACHMENTS=0",
     "BUI_AGENT_BRIDGE_TOOLS=1",
+    "BUI_OPENCODE_EAGER_START=1",
     "BUI_LOG_TO_FILE=1",
     "BUI_LOG_FILE=",
     "",

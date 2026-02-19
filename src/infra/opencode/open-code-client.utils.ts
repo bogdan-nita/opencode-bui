@@ -435,7 +435,18 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
 
   const ensureContext = async (): Promise<SdkContext> => {
     if (!contextPromise) {
-      contextPromise = createSdkContext(options);
+      const startedAt = Date.now();
+      contextPromise = createSdkContext(options)
+        .then((context) => {
+          logger.info({ startupMs: Date.now() - startedAt }, "[bui] OpenCode SDK context ready.");
+          return context;
+        })
+        .catch((error) => {
+          contextPromise = undefined;
+          throw error;
+        });
+    } else {
+      logger.info("[bui] Reusing existing OpenCode SDK context.");
     }
     return await contextPromise;
   };
@@ -775,6 +786,9 @@ export function createOpenCodeClient(options: ClientBootstrapOptions): OpenCodeC
   };
 
   return {
+    async warmup() {
+      await ensureContext();
+    },
     async createSession(input) {
       const { client } = await ensureContext();
       const sid = await ensureSession(client, input?.cwd, undefined);

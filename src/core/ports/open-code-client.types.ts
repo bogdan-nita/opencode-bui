@@ -21,6 +21,7 @@ export type OpenCodeRunOptions = {
 };
 
 export interface OpenCodeClient {
+  warmup?: () => Promise<void>;
   createSession(input?: { cwd?: string } & OpenCodeRunOptions): Promise<OpenCodeResult>;
   runPrompt(input: { prompt: string; sessionId?: string; cwd?: string } & OpenCodeRunOptions): Promise<OpenCodeResult>;
   runCommand(input: { command: string; args?: string; sessionId?: string; cwd?: string } & OpenCodeRunOptions): Promise<OpenCodeResult>;
