@@ -37,6 +37,8 @@ const nativeCommands = [
   { command: "health", description: "Show bridge health" },
   { command: "pid", description: "Show process id" },
   { command: "agent", description: "Agent utility commands" },
+  { command: "permit", description: "Resolve pending permission" },
+  { command: "allow", description: "Alias for /permit" },
   { command: "help", description: "Run OpenCode /help" },
   { command: "init", description: "Run OpenCode /init" },
   { command: "undo", description: "Run OpenCode /undo" },
@@ -81,6 +83,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     resolve: (response: "once" | "always" | "reject") => void;
     timer: ReturnType<typeof setTimeout>;
   }>();
+  const lastPermissionByConversation = new Map<string, string>();
 
   const pluginBridgeServerEnabled = process.env.BUI_PLUGIN_BRIDGE_SERVER === "1";
   const pluginBridgeHost = process.env.BUI_PLUGIN_BRIDGE_HOST?.trim() || "127.0.0.1";
@@ -167,21 +170,21 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
   const parsePermissionResponseFromText = (
     envelope: InboundEnvelope,
-  ): { permissionId: string; response: "once" | "always" | "reject" } | undefined => {
+  ): { permissionId?: string; response: "once" | "always" | "reject" } | undefined => {
     const slash = parseSlashCommand(envelope);
     if (!slash) {
       return undefined;
     }
-    if (slash.command !== "permit" && slash.command !== "permission") {
+    if (slash.command !== "permit" && slash.command !== "permission" && slash.command !== "allow") {
       return undefined;
     }
     const [responseRaw, permissionIdRaw] = slash.args.split(/\s+/, 2);
     const response = responseRaw === "once" || responseRaw === "always" || responseRaw === "reject" ? responseRaw : undefined;
     const permissionId = permissionIdRaw?.trim();
-    if (!response || !permissionId) {
+    if (!response) {
       return undefined;
     }
-    return { permissionId, response };
+    return permissionId ? { permissionId, response } : { response };
   };
 
   const parseSlashCommand = (envelope: InboundEnvelope): { command: string; args: string } | undefined => {
@@ -362,6 +365,7 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           requesterUserId: envelope.user.id,
           expiresAtUnixSeconds,
         });
+        lastPermissionByConversation.set(key, permission.id);
 
         const permissionLines = [
           "Permission required",
@@ -854,8 +858,25 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
 
         const permissionFromText = parsePermissionResponseFromText(envelope);
         if (permissionFromText) {
-          logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permissionFromText.permissionId, response: permissionFromText.response }, "[bui] Permission response received from text command.");
-          await resolvePermissionDecision(bridge, envelope, key, permissionFromText.permissionId, permissionFromText.response);
+          const resolvedPermissionId = permissionFromText.permissionId || lastPermissionByConversation.get(key);
+          logger.info({
+            bridgeId: envelope.bridgeId,
+            conversation: key,
+            permissionId: resolvedPermissionId,
+            response: permissionFromText.response,
+            usedFallback: !permissionFromText.permissionId,
+          }, "[bui] Permission response received from text command.");
+
+          if (!resolvedPermissionId) {
+            await bridge.send({
+              bridgeId: envelope.bridgeId,
+              conversation: envelope.conversation,
+              text: "No recent permission request found. Usage: /permit <once|always|reject> <permissionId>",
+            });
+            return;
+          }
+
+          await resolvePermissionDecision(bridge, envelope, key, resolvedPermissionId, permissionFromText.response);
           return;
         }
 
@@ -863,9 +884,19 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
           await bridge.send({
             bridgeId: envelope.bridgeId,
             conversation: envelope.conversation,
-            text: "Usage: /permit <once|always|reject> <permissionId>",
+            text: "Usage: /permit <once|always|reject> [permissionId]",
           });
           logger.warn({ bridgeId: envelope.bridgeId, conversation: key, args: slash.args }, "[bui] Invalid permit command format.");
+          return;
+        }
+
+        if (slash?.command === "allow") {
+          await bridge.send({
+            bridgeId: envelope.bridgeId,
+            conversation: envelope.conversation,
+            text: "Usage: /allow <once|always|reject> [permissionId]",
+          });
+          logger.warn({ bridgeId: envelope.bridgeId, conversation: key, args: slash.args }, "[bui] Invalid allow command format.");
           return;
         }
 
