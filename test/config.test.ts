@@ -14,13 +14,21 @@ import {
 
 describe("config", () => {
   let tempDir = "";
+  let originalTelegramToken: string | undefined;
 
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), "opencode-bui-config-"));
+    originalTelegramToken = process.env.TELEGRAM_BOT_TOKEN;
+    process.env.TELEGRAM_BOT_TOKEN = "test-token";
   });
 
   afterEach(async () => {
     resetRuntimeConfigCache();
+    if (originalTelegramToken === undefined) {
+      delete process.env.TELEGRAM_BOT_TOKEN;
+    } else {
+      process.env.TELEGRAM_BOT_TOKEN = originalTelegramToken;
+    }
     await rm(tempDir, { recursive: true, force: true });
   });
 
