@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../../",
+    "baseUrl": "../../",
+    "paths": {
+      "@bin/*": ["src/bin/*"],
+      "@core/*": ["src/core/*"],
+      "@infra/*": ["src/infra/*"],
+      "@bridges/*": ["src/bridges/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "../../src/**/*.ts"]
+}

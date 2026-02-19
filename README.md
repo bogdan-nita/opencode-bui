@@ -50,6 +50,13 @@ bunx opencode-bui onboard
 bunx opencode-bui start
 ```
 
+Package-level CLIs (workspace modules):
+
+```bash
+bun run --cwd packages/opencode-bui-bridge start
+bun run --cwd packages/opencode-bui-plugin send -- --session <sessionId> --text "hello"
+```
+
 Optional local binary link:
 
 ```bash
