@@ -1,5 +1,5 @@
 import { confirm, isCancel, select, text } from "@clack/prompts";
-import { basename, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { discoverConfigContext, readRuntimeConfig } from "@core/config.js";
 import { ensureDir, fileExists, writeTextFile } from "@infra/runtime/runtime-fs.utils.js";
 import { allBridgeDefinitions } from "@core/application/bridge-registry.utils.js";
@@ -30,6 +30,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
 
   const configPath = resolve(targetRoot, "opencode-bui.config.ts");
   const envPath = resolve(targetRoot, ".env");
+  const pluginEnvPath = resolve(process.env.HOME ?? process.cwd(), ".config", "opencode", "plugins", ".env");
 
   const interactive = assertNotCancelled(
     await confirm({ message: "Run interactive onboarding?", initialValue: true }),
@@ -135,11 +136,34 @@ export async function runOnboarding(): Promise<OnboardResult> {
     "Onboarding cancelled",
   );
 
+  const setupPluginEnv = assertNotCancelled(
+    await confirm({ message: "Create/update OpenCode plugin env for BUI autodiscovery?", initialValue: true }),
+    "Onboarding cancelled",
+  );
+
+  const pluginEnvTemplate = [
+    "# OpenCode BUI plugin integration",
+    `BUI_PLUGIN_DISCOVERY=${resolve(targetRoot, "plugin-bridge.discovery.json")}`,
+    "# Optional explicit override",
+    "# BUI_PLUGIN_BRIDGE_URL=http://127.0.0.1:4499/v1/plugin/send",
+    "# BUI_PLUGIN_BRIDGE_TOKEN=",
+    "",
+  ].join("\n");
+
   await writeIfMissing(configPath, configTemplate);
   if (writeEnvFile) {
     await writeIfMissing(envPath, envTemplate);
   }
+  if (setupPluginEnv) {
+    await ensureDir(dirname(pluginEnvPath));
+    await writeIfMissing(pluginEnvPath, pluginEnvTemplate);
+  }
 
   await readRuntimeConfig({ fresh: true, cwd: targetRoot });
-  return { targetRoot, configPath, ...(writeEnvFile ? { envPath } : {}) };
+  return {
+    targetRoot,
+    configPath,
+    ...(writeEnvFile ? { envPath } : {}),
+    ...(setupPluginEnv ? { pluginEnvPath } : {}),
+  };
 }

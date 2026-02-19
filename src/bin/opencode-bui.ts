@@ -232,7 +232,7 @@ cli
   .command("onboard", "Create starter BUI config and env files")
   .action(async () => {
     await withCliErrors(async () => {
-      const { targetRoot, configPath, envPath } = await runOnboarding();
+      const { targetRoot, configPath, envPath, pluginEnvPath } = await runOnboarding();
       const cfg = await readRuntimeConfig({ fresh: true, cwd: targetRoot });
 
       const lines = [
@@ -242,6 +242,10 @@ cli
         ...(envPath
           ? [`- Env file: ${envPath}`]
           : ["- Env file: skipped (use shell env or add .env later)"]),
+        ...(pluginEnvPath
+          ? [`- Plugin env file: ${pluginEnvPath}`]
+          : ["- Plugin env file: skipped (plugin can still use discovery defaults)"]),
+        "- Plugin helper: opencode-bui-plugin send --session <sessionId> --text \"...\"",
         "- Starting runtime with enabled bridges...",
       ];
       logger.info(lines.join("\n"));

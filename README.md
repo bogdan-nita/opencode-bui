@@ -43,6 +43,13 @@ bun run onboard
 bun run start
 ```
 
+Alternative (bunx-style CLI):
+
+```bash
+bunx opencode-bui onboard
+bunx opencode-bui start
+```
+
 Optional local binary link:
 
 ```bash

@@ -1,13 +1,16 @@
 {
   "name": "opencode-bui",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/opencode-bui-bridge",
     "packages/opencode-bui-plugin"
   ],
+  "bin": {
+    "opencode-bui": "src/bin/opencode-bui.ts"
+  },
   "scripts": {
     "dev": "bun --watch src/bin/opencode-bui.ts start",
     "dev:telegram": "bun --watch src/standalone-bot.ts",
