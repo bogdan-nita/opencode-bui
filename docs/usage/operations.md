@@ -76,12 +76,11 @@ Bridge command registration includes native BUI commands plus command markdown f
 - Default endpoint: `http://127.0.0.1:4499/v1/plugin/send`.
 - Secret gating: bridge requires `x-bui-token` (from `BUI_PLUGIN_BRIDGE_TOKEN` or generated token).
 - Autodiscovery: bridge writes discovery file at `<runtimeDir>/plugin-bridge.discovery.json` (override with `BUI_PLUGIN_BRIDGE_DISCOVERY`).
-- Plugin helper command:
-  - `opencode-bui-plugin send --session <sessionId> --text "..."`
-  - `opencode-bui-plugin send --session <sessionId> --file /path/to/file --caption "..."`
-- Plugin helper reads endpoint+token from discovery automatically unless overridden by `--url`/`--token`.
+- OpenCode plugin tools:
+  - `bui_bridge_boot` starts bridge if missing.
+  - `bui_send` sends text/files from current OpenCode session to bridge chat.
 - OpenCode plugin file example (`~/.config/opencode/plugins/opencode-bui-plugin.js`):
-  - `import { OpenCodeBuiPlugin } from "opencode-bui-plugin"`
+  - `import { OpenCodeBuiPlugin } from "opencode-bui"`
   - `export const BuiBridgePlugin = OpenCodeBuiPlugin`
 
 Session visibility note:

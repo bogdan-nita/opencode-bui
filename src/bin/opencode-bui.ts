@@ -248,7 +248,7 @@ cli
         ...(pluginFilePath
           ? [`- Plugin file: ${pluginFilePath}`]
           : ["- Plugin file: skipped"]),
-        "- Plugin helper: opencode-bui-plugin send --session <sessionId> --text \"...\"",
+        "- Plugin tools: use bui_bridge_boot then bui_send from OpenCode",
         "- Starting runtime with enabled bridges...",
       ];
       logger.info(lines.join("\n"));

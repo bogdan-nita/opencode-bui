@@ -50,21 +50,25 @@ bunx opencode-bui onboard
 bunx opencode-bui start
 ```
 
-Package-level CLIs:
+Bridge CLI:
 
 ```bash
 bun run start
-bun run plugin:send -- --session <sessionId> --text "hello"
 ```
 
 OpenCode plugin registration (global example):
 
 ```js
 // ~/.config/opencode/plugins/opencode-bui-plugin.js
-import { OpenCodeBuiPlugin } from "opencode-bui-plugin"
+import { OpenCodeBuiPlugin } from "opencode-bui"
 
 export const BuiBridgePlugin = OpenCodeBuiPlugin
 ```
+
+Useful plugin tools from OpenCode sessions:
+
+- `bui_bridge_boot` starts the bridge daemon if needed.
+- `bui_send` sends text/files from the active session to configured bridge chat.
 
 Optional local binary link:
 
@@ -174,7 +178,7 @@ bun run build
 
 ## Project Structure
 
-- `src/bin/*`: bridge CLI and onboarding plus plugin helper CLI
+- `src/bin/*`: bridge CLI and onboarding
 - `src/core/*`: runtime domain, ports, and orchestration
 - `src/infra/*`: config, storage, db, lock, OpenCode adapter and plugin bridge API
 - `src/bridges/*`: Telegram/Discord bridge adapters
