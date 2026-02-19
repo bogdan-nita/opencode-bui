@@ -29,6 +29,10 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
   let handlers: BridgeRuntimeHandlers | undefined;
   let started = false;
   let startError: string | undefined;
+  const typingIntervals = new Map<string, ReturnType<typeof setInterval>>();
+
+  const conversationTypingKey = (conversation: { bridgeId: string; channelId: string; threadId?: string }): string =>
+    `${conversation.bridgeId}:${conversation.channelId}:${conversation.threadId || ""}`;
 
   const downloadTelegramFile = async (fileId: string): Promise<{ bytes: Uint8Array; fileNameHint?: string }> => {
     const file = await bot.api.getFile(fileId);
@@ -301,6 +305,10 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
         });
     },
     async stop() {
+      for (const timer of typingIntervals.values()) {
+        clearInterval(timer);
+      }
+      typingIntervals.clear();
       if (started) {
         bot.stop();
       }
@@ -308,6 +316,35 @@ export async function createTelegramBridge(config: RuntimeConfig): Promise<Bridg
     },
     async send(envelope: OutboundEnvelope) {
       await sendOutboundViaTelegram(bot, envelope, config.bridges.telegram.formatting.maxChunkChars);
+    },
+    async beginTyping(conversation) {
+      const key = conversationTypingKey(conversation);
+      const chatId = Number.parseInt(conversation.channelId, 10);
+      if (!Number.isFinite(chatId)) {
+        throw new Error(`Invalid Telegram chat id: ${conversation.channelId}`);
+      }
+
+      const sendTyping = async () => {
+        try {
+          await bot.api.sendChatAction(chatId, "typing");
+        } catch (error) {
+          logger.warn({ error, chatId }, "[bui] Telegram typing action failed.");
+        }
+      };
+
+      await sendTyping();
+      const interval = setInterval(() => {
+        void sendTyping();
+      }, 4000);
+      typingIntervals.set(key, interval);
+
+      return async () => {
+        const existing = typingIntervals.get(key);
+        if (existing) {
+          clearInterval(existing);
+          typingIntervals.delete(key);
+        }
+      };
     },
     async upsertActivityMessage(input) {
       const chatId = Number.parseInt(input.conversation.channelId, 10);

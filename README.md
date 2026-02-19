@@ -104,6 +104,7 @@ Common environment variables:
 - `BUI_AUTO_ATTACHMENTS` (optional, default `0`; set `1` to send OpenCode-detected local files automatically)
 - `BUI_AGENT_BRIDGE_TOOLS` (optional, default `1`; injects bridge tool instructions so agent can request explicit attachments)
 - `BUI_OPENCODE_EAGER_START` (optional, default `1`; pre-warms OpenCode SDK context at runtime startup)
+- `BUI_TYPING_INDICATOR` (optional, default `1`; sends typing indicator while runs are active)
 - `BUI_LOG_TO_FILE` (optional, default `1`)
 - `BUI_LOG_FILE` (optional, default `./opencode-bui.log`)
 

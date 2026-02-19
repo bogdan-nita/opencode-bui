@@ -31,6 +31,11 @@ In-chat runtime controls:
 - `BUI_OPENCODE_EAGER_START=1` (default) pre-warms OpenCode SDK context during BUI startup.
 - This shifts startup cost to boot time and reduces first-message latency in chat.
 
+## Typing indicator
+
+- `BUI_TYPING_INDICATOR=1` (default) emits bridge typing indicators while a run is active.
+- Set `BUI_TYPING_INDICATOR=0` to disable typing actions.
+
 Bridge command registration includes native BUI commands plus command markdown files discovered from current OpenCode config directories (`commands/` or `.opencode/commands/`).
 
 ## Quality gates

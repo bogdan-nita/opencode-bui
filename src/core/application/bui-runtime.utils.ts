@@ -170,6 +170,16 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
     let activityMessageToken: string | undefined;
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
     let flushing = Promise.resolve();
+    let stopTyping: (() => Promise<void> | void) | undefined;
+
+    const typingEnabled = process.env.BUI_TYPING_INDICATOR !== "0";
+    if (typingEnabled && bridge.beginTyping) {
+      try {
+        stopTyping = await bridge.beginTyping(envelope.conversation);
+      } catch (error) {
+        logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to start typing indicator.");
+      }
+    }
 
     const renderActivityText = (): string => {
       const recent = activityLines.slice(-activityRetainLines);
@@ -397,6 +407,13 @@ export async function startBuiRuntime(input: BuiRuntimeDependencies): Promise<vo
       });
       return;
     } finally {
+      if (stopTyping) {
+        try {
+          await stopTyping();
+        } catch (error) {
+          logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to stop typing indicator.");
+        }
+      }
       const active = activeRuns.get(key);
       if (active === controller) {
         activeRuns.delete(key);

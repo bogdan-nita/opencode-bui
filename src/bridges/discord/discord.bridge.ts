@@ -99,6 +99,10 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
   const rest = new REST({ version: "10" }).setToken(config.bridges.discord.token);
   let handlers: BridgeRuntimeHandlers | undefined;
   let started = false;
+  const typingIntervals = new Map<string, ReturnType<typeof setInterval>>();
+
+  const typingKey = (conversation: { bridgeId: string; channelId: string; threadId?: string }) =>
+    `${conversation.bridgeId}:${conversation.channelId}:${conversation.threadId || ""}`;
 
   const adapter: BridgeAdapter = {
     id: "discord",
@@ -252,6 +256,10 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
       logger.info("[bui] Discord bridge logged in.");
     },
     async stop() {
+      for (const timer of typingIntervals.values()) {
+        clearInterval(timer);
+      }
+      typingIntervals.clear();
       if (started) {
         await client.destroy();
       }
@@ -287,6 +295,35 @@ export async function createDiscordBridge(config: RuntimeConfig): Promise<Bridge
         };
         await channel.send(payload);
       }
+    },
+    async beginTyping(conversation) {
+      const channel = await client.channels.fetch(conversation.channelId);
+      if (!channel || !channel.isTextBased() || !("sendTyping" in channel) || typeof channel.sendTyping !== "function") {
+        throw new Error(`Discord channel does not support typing indicator: ${conversation.channelId}`);
+      }
+
+      const key = typingKey(conversation);
+      const sendTyping = async () => {
+        try {
+          await channel.sendTyping();
+        } catch (error) {
+          logger.warn({ error, channelId: conversation.channelId }, "[bui] Discord typing action failed.");
+        }
+      };
+
+      await sendTyping();
+      const interval = setInterval(() => {
+        void sendTyping();
+      }, 7000);
+      typingIntervals.set(key, interval);
+
+      return async () => {
+        const existing = typingIntervals.get(key);
+        if (existing) {
+          clearInterval(existing);
+          typingIntervals.delete(key);
+        }
+      };
     },
     async upsertActivityMessage(input) {
       const channel = await client.channels.fetch(input.conversation.channelId);

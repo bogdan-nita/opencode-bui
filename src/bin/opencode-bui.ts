@@ -218,6 +218,7 @@ cli.command("doctor", "Show runtime diagnostics").action(async () => {
       `- Auto attachments enabled: ${process.env.BUI_AUTO_ATTACHMENTS === "1" ? "yes" : "no"}`,
       `- Agent bridge tools prompt: ${process.env.BUI_AGENT_BRIDGE_TOOLS === "0" ? "disabled" : "enabled"}`,
       `- OpenCode eager start: ${process.env.BUI_OPENCODE_EAGER_START === "0" ? "disabled" : "enabled"}`,
+      `- Typing indicator: ${process.env.BUI_TYPING_INDICATOR === "0" ? "disabled" : "enabled"}`,
       `- File logging enabled: ${process.env.BUI_LOG_TO_FILE === "0" ? "no" : "yes"}`,
       `- Log file path: ${process.env.BUI_LOG_FILE || `${process.cwd()}/opencode-bui.log`}`,
     ];

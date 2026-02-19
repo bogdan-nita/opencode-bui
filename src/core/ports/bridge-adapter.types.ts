@@ -22,6 +22,7 @@ export type BridgeAdapter = {
   start: (handlers: BridgeRuntimeHandlers) => Promise<void>;
   stop: () => Promise<void>;
   send: (envelope: OutboundEnvelope) => Promise<void>;
+  beginTyping?: (conversation: InboundEnvelope["conversation"]) => Promise<() => Promise<void> | void>;
   upsertActivityMessage?: (input: {
     conversation: InboundEnvelope["conversation"];
     text: string;
