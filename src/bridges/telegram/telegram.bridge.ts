@@ -1,0 +1,208 @@
+import { Bot } from "grammy";
+import type { RuntimeConfig } from "@infra/config/config.types.js";
+import type { BridgeAdapter, BridgeCommandDescriptor, BridgeRuntimeHandlers } from "@core/ports/bridge-adapter.types.js";
+import type { OutboundEnvelope } from "@core/domain/envelope.types.js";
+import { buildTextInbound, sendOutboundViaTelegram } from "./telegram.utils.js";
+import { logger } from "@infra/runtime/logger.utils.js";
+
+function isUserAllowed(config: RuntimeConfig, userId: number, username: string | undefined): boolean {
+  const allowlist = config.bridges.telegram.allowedUsers;
+  if (allowlist.ids.size === 0 && allowlist.usernames.size === 0) {
+    return true;
+  }
+  if (allowlist.ids.has(userId)) {
+    return true;
+  }
+
+  const normalizedUsername = username?.trim().replace(/^@+/, "").toLowerCase();
+  return normalizedUsername ? allowlist.usernames.has(normalizedUsername) : false;
+}
+
+export async function createTelegramBridge(config: RuntimeConfig): Promise<BridgeAdapter> {
+  const token = config.bridges.telegram.token;
+  if (!token) {
+    throw new Error("Telegram token is missing.");
+  }
+
+  const bot = new Bot(token);
+  let handlers: BridgeRuntimeHandlers | undefined;
+  let started = false;
+  let startError: string | undefined;
+
+  const safeAnswerCallbackQuery = async (
+    ctx: { answerCallbackQuery: (options?: { text?: string; show_alert?: boolean; cache_time?: number }) => Promise<unknown> },
+    text = "Received",
+  ): Promise<void> => {
+    try {
+      await ctx.answerCallbackQuery({ text, cache_time: 1 });
+    } catch (error) {
+      logger.warn({ error }, "[bui] Telegram answerCallbackQuery failed (likely stale button tap).");
+    }
+  };
+
+  const adapter: BridgeAdapter = {
+    id: "telegram",
+    capabilities: {
+      slashCommands: true,
+      buttons: true,
+      mediaUpload: true,
+      mediaDownload: true,
+      messageEdit: false,
+      threads: false,
+      markdown: "limited",
+    },
+    async start(nextHandlers) {
+      handlers = nextHandlers;
+      if (started) {
+        return;
+      }
+      logger.info("[bui] Telegram bridge initializing polling handlers.");
+      bot.catch((error) => {
+        logger.error({ error }, "[bui] Telegram middleware error.");
+      });
+
+      bot.on("message:text", async (ctx) => {
+        if (!handlers) {
+          return;
+        }
+        const userId = ctx.from?.id;
+        if (!userId) {
+          return;
+        }
+
+        if (!isUserAllowed(config, userId, ctx.from?.username)) {
+          logger.warn({ userId, username: ctx.from?.username }, "[bui] Telegram message blocked by allowlist.");
+          await ctx.reply("You are not allowed to use this bot.");
+          return;
+        }
+
+        logger.info({ userId, username: ctx.from?.username, chatId: ctx.chat.id }, "[bui] Telegram text message intercepted.");
+
+        await handlers.onInbound(
+          buildTextInbound({
+            chatId: ctx.chat.id,
+            userId,
+            ...(ctx.from?.username ? { username: ctx.from.username } : {}),
+            text: ctx.message.text,
+            unixSeconds: ctx.message.date,
+          }),
+        );
+      });
+
+      bot.on("message:photo", async (ctx) => {
+        if (!handlers) {
+          return;
+        }
+        const userId = ctx.from?.id;
+        if (!userId) {
+          return;
+        }
+        if (!isUserAllowed(config, userId, ctx.from?.username)) {
+          logger.warn({ userId, username: ctx.from?.username }, "[bui] Telegram media blocked by allowlist.");
+          return;
+        }
+        logger.info({ userId, username: ctx.from?.username, chatId: ctx.chat.id }, "[bui] Telegram photo intercepted.");
+        const photos = ctx.message.photo;
+        const largest = photos[photos.length - 1];
+        if (!largest) {
+          return;
+        }
+
+        await handlers.onInbound({
+          bridgeId: "telegram",
+          conversation: { bridgeId: "telegram", channelId: String(ctx.chat.id) },
+          channel: { id: String(ctx.chat.id), kind: "dm" },
+          user: { id: String(userId), ...(ctx.from?.username ? { username: ctx.from.username } : {}) },
+          receivedAtUnixSeconds: ctx.message.date,
+          event: {
+            type: "media",
+            mediaKind: "image",
+            fileId: largest.file_id,
+          },
+        });
+      });
+
+      bot.on("callback_query:data", async (ctx) => {
+        if (!handlers) {
+          return;
+        }
+        const userId = ctx.from?.id;
+        const chatId = ctx.callbackQuery.message?.chat.id;
+        if (!userId) {
+          await safeAnswerCallbackQuery(ctx, "Invalid user");
+          return;
+        }
+        if (!chatId) {
+          await safeAnswerCallbackQuery(ctx, "Invalid chat");
+          return;
+        }
+        if (!isUserAllowed(config, userId, ctx.from?.username)) {
+          logger.warn({ userId, username: ctx.from?.username }, "[bui] Telegram callback blocked by allowlist.");
+          await safeAnswerCallbackQuery(ctx, "Not allowed");
+          return;
+        }
+        logger.info(
+          {
+            userId,
+            username: ctx.from?.username,
+            chatId,
+            data: ctx.callbackQuery.data,
+            callbackQueryId: ctx.callbackQuery.id,
+            messageDate: ctx.callbackQuery.message?.date,
+          },
+          "[bui] Telegram callback intercepted.",
+        );
+        await safeAnswerCallbackQuery(ctx, "Processing...");
+        await handlers.onInbound({
+          bridgeId: "telegram",
+          conversation: { bridgeId: "telegram", channelId: String(chatId) },
+          channel: { id: String(chatId), kind: "dm" },
+          user: { id: String(userId), ...(ctx.from?.username ? { username: ctx.from.username } : {}) },
+          receivedAtUnixSeconds: Math.floor(Date.now() / 1000),
+          event: {
+            type: "button",
+            actionId: ctx.callbackQuery.data,
+          },
+          raw: ctx.callbackQuery,
+        });
+      });
+
+      started = true;
+      startError = undefined;
+      void bot
+        .start({ drop_pending_updates: config.bridges.telegram.polling.dropPendingUpdates })
+        .then(() => {
+          logger.info("[bui] Telegram polling started.");
+        })
+        .catch((error) => {
+          startError = error instanceof Error ? error.message : String(error);
+          logger.error({ error: startError }, "[bui] Telegram polling failed.");
+          started = false;
+        });
+    },
+    async stop() {
+      if (started) {
+        bot.stop();
+      }
+      started = false;
+    },
+    async send(envelope: OutboundEnvelope) {
+      await sendOutboundViaTelegram(bot, envelope, config.bridges.telegram.formatting.maxChunkChars);
+    },
+    async setCommands(commands: BridgeCommandDescriptor[]) {
+      if (!config.bridges.telegram.commands.registerOnStart) {
+        return;
+      }
+      await bot.api.setMyCommands(commands.map((entry) => ({ command: entry.command, description: entry.description })));
+    },
+    async health() {
+      return {
+        bridgeId: "telegram",
+        status: startError ? "degraded" : started ? "ready" : "stopped",
+        ...(startError ? { details: startError } : {}),
+      };
+    },
+  };
+
+  return adapter;
+}

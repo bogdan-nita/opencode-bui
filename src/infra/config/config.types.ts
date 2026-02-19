@@ -1,0 +1,55 @@
+import type { BridgeId } from "../../core/domain/bridge.types.js";
+
+export type ConfigDiscovery = {
+  nearestOpencodeConfig?: string;
+  nearestOpencodeDir?: string;
+  nearestBuiConfig?: string;
+  nearestBuiDir?: string;
+};
+
+export type BuiPaths = {
+  runtimeDir: string;
+  dbPath: string;
+  uploadDir: string;
+  lockPath: string;
+};
+
+export type RuntimeConfig = {
+  opencodeBin: string;
+  opencodeAttachUrl?: string;
+  paths: BuiPaths;
+  bridges: {
+    telegram: {
+      enabled: boolean;
+      token: string;
+      allowedUsers: {
+        ids: Set<number>;
+        usernames: Set<string>;
+      };
+      sttCommand: string;
+      sttTimeoutMs: number;
+      backlogStaleSeconds: number;
+      backlogBatchWindowMs: number;
+      polling: {
+        dropPendingUpdates: boolean;
+      };
+      commands: {
+        registerOnStart: boolean;
+      };
+      formatting: {
+        maxChunkChars: number;
+      };
+    };
+    discord: {
+      enabled: boolean;
+      token: string;
+      applicationId: string;
+      guildScope: "global" | "guild";
+      commandSyncMode: "on-start" | "manual";
+      defaultGuildId?: string;
+    };
+  };
+  discovery: ConfigDiscovery;
+};
+
+export type BridgeName = BridgeId;
