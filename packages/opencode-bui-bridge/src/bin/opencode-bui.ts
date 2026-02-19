@@ -19,6 +19,7 @@ import { runOnboarding } from "@bin/onboard.utils.js";
 import { ensureDir, fileExists } from "@infra/runtime/runtime-fs.utils.js";
 import { resolve } from "node:path";
 import { logger } from "@infra/runtime/logger.utils.js";
+import { createFileLockService } from "@infra/lock/file-lock-service.utils.js";
 
 const cli = cac("opencode-bui-bridge");
 
@@ -83,8 +84,17 @@ async function startRuntimeFromConfig(
       },
     },
   });
+  const lockService = createFileLockService();
+  logger.info({ lockPath: cfg.paths.lockPath }, "[bui] Attempting singleton lock acquisition.");
+  const lockHandle = await lockService.acquire(cfg.paths.lockPath);
+  logger.info({ lockPath: cfg.paths.lockPath }, "[bui] Singleton lock acquired.");
 
-  await startBuiRuntime({ config: cfg, bridges });
+  try {
+    await startBuiRuntime({ config: cfg, bridges });
+  } finally {
+    await lockHandle.release();
+    logger.info({ lockPath: cfg.paths.lockPath }, "[bui] Singleton lock released.");
+  }
 }
 
 function parseBridgeOption(value: string | undefined): BridgeName | undefined {
