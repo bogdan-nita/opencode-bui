@@ -284,6 +284,13 @@ async function resolveDefaultDbDir(discovery: ConfigDiscovery): Promise<string |
 }
 
 function fromEnv(): LooseInput {
+  const envAllowedUsersRaw = process.env.TELEGRAM_ALLOWED_USERS;
+  const envAllowedUsersParsed = parseAllowedUsers(envAllowedUsersRaw);
+  const envAllowedUsers = envAllowedUsersParsed ?? [];
+  const envAllowedUserIds = envAllowedUsers.length > 0
+    ? []
+    : parseUserIds(process.env.TELEGRAM_ALLOWED_USER_IDS);
+
   return {
     opencodeBin: process.env.OPENCODE_BIN?.trim() || undefined,
     opencodeAttachUrl: process.env.OPENCODE_ATTACH_URL?.trim() || undefined,
@@ -295,8 +302,8 @@ function fromEnv(): LooseInput {
     bridges: {
       telegram: {
         token: process.env.TELEGRAM_BOT_TOKEN?.trim() || undefined,
-        allowedUserIds: parseUserIds(process.env.TELEGRAM_ALLOWED_USER_IDS),
-        allowedUsers: parseAllowedUsers(process.env.TELEGRAM_ALLOWED_USERS),
+        allowedUserIds: envAllowedUserIds,
+        allowedUsers: envAllowedUsersParsed,
         sttCommand: process.env.TELEGRAM_STT_COMMAND?.trim() || process.env.TELEGRAM_STT_COMAND?.trim() || undefined,
         sttTimeoutMs: parseNumber(process.env.TELEGRAM_STT_TIMEOUT_MS),
         backlogStaleSeconds: parseNumber(process.env.TELEGRAM_BACKLOG_STALE_SECONDS),
