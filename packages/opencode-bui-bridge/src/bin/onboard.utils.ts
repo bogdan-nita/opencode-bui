@@ -1,5 +1,6 @@
 import { confirm, isCancel, select, text } from "@clack/prompts";
 import { basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { discoverConfigContext, readRuntimeConfig } from "@core/config.js";
 import { ensureDir, fileExists, writeTextFile } from "@infra/runtime/runtime-fs.utils.js";
 import { allBridgeDefinitions } from "@core/application/bridge-registry.utils.js";
@@ -33,6 +34,15 @@ export async function runOnboarding(): Promise<OnboardResult> {
   const pluginDir = resolve(process.env.HOME ?? process.cwd(), ".config", "opencode", "plugins");
   const pluginEnvPath = resolve(pluginDir, ".env");
   const pluginFilePath = resolve(pluginDir, "opencode-bui-plugin.js");
+  const pluginModulePath = resolve(
+    fileURLToPath(new URL(".", import.meta.url)),
+    "..",
+    "..",
+    "..",
+    "opencode-bui-plugin",
+    "src",
+    "index.js",
+  );
 
   const interactive = assertNotCancelled(
     await confirm({ message: "Run interactive onboarding?", initialValue: true }),
@@ -153,7 +163,7 @@ export async function runOnboarding(): Promise<OnboardResult> {
   ].join("\n");
 
   const pluginFileTemplate = [
-    "import { OpenCodeBuiPlugin } from \"opencode-bui-plugin\";",
+    `import { OpenCodeBuiPlugin } from "${pluginModulePath}";`,
     "",
     "export const BuiBridgePlugin = OpenCodeBuiPlugin;",
     "",
