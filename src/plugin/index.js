@@ -1,6 +1,6 @@
 import { tool } from "@opencode-ai/plugin";
-import { defaultPluginDiscoveryPath, readPluginBridgeDiscovery } from "./infra/plugin-bridge/discovery.utils.js";
-import { createPluginBridgeClient } from "./bridge-client/client.utils.js";
+import { defaultPluginDiscoveryPath, readPluginBridgeDiscovery } from "../infra/plugin-bridge/discovery.utils.js";
+import { createPluginBridgeClient } from "../bridge-client/client.utils.js";
 
 async function resolveEndpoint() {
   const envUrl = process.env.BUI_PLUGIN_BRIDGE_URL?.trim();

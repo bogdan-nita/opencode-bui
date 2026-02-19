@@ -20,11 +20,11 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@bin/*": ["packages/opencode-bui-bridge/src/bin/*"],
-      "@core/*": ["packages/opencode-bui-bridge/src/core/*"],
-      "@infra/*": ["packages/opencode-bui-bridge/src/infra/*"],
-      "@bridges/*": ["packages/opencode-bui-bridge/src/bridges/*"]
+      "@bin/*": ["src/bin/*"],
+      "@core/*": ["src/core/*"],
+      "@infra/*": ["src/infra/*"],
+      "@bridges/*": ["src/bridges/*"]
     }
   },
-  "include": ["packages/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

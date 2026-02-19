@@ -20,7 +20,7 @@ import { ensureDir, fileExists } from "@infra/runtime/runtime-fs.utils.js";
 import { resolve } from "node:path";
 import { logger } from "@infra/runtime/logger.utils.js";
 
-const cli = cac("opencode-bui-bridge");
+const cli = cac("opencode-bui");
 
 async function withCliErrors(task: () => Promise<void>): Promise<void> {
   try {

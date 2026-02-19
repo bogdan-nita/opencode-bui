@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import type { PluginBridgeAppType } from "opencode-bui-bridge/plugin-bridge";
+import type { PluginBridgeAppType } from "@infra/plugin-bridge/api.utils.js";
 
 export type PluginBridgeEndpoint = {
   url: string;

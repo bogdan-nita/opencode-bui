@@ -7,8 +7,8 @@ Maintain `opencode-bui` as a Bun-first, bridge-agnostic runtime where each bridg
 ## Always follow
 
 - Keep abstraction boundaries:
-  - bridge-specific logic in `packages/opencode-bui-bridge/src/bridges/<name>/`
-  - orchestration in `packages/opencode-bui-bridge/src/core/application/`
+  - bridge-specific logic in `src/bridges/<name>/`
+  - orchestration in `src/core/application/`
   - no bridge-type branching in core policy logic
 - Prefer Zod over ad-hoc unknown parsing.
 - Keep naming style: `*.schema.ts`, `*.types.ts`, `*.utils.ts`, `*.test.ts`.
