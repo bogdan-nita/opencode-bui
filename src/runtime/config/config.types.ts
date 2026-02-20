@@ -1,4 +1,4 @@
-import type { BridgeID } from "@bridge/bridge.types";
+import type { BridgeID } from "@runtime/bridge/types";
 
 export type ConfigDiscovery = {
   nearestOpencodeConfig?: string;
