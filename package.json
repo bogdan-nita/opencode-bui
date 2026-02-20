@@ -4,27 +4,24 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "workspaces": [
-    "packages/opencode-bui-bridge",
-    "packages/opencode-bui-plugin"
-  ],
   "bin": {
-    "opencode-bui-bridge": "packages/opencode-bui-bridge/src/bin/opencode-bui.ts"
+    "opencode-bui-bridge": "src/bin/opencode-bui.ts"
   },
   "scripts": {
-    "dev": "bun --watch packages/opencode-bui-bridge/src/bin/opencode-bui.ts start",
-    "dev:telegram": "bun --watch packages/opencode-bui-bridge/src/standalone-bot.ts",
-    "start": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts start",
-    "start:bridge": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts start",
-    "onboard": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts onboard",
-    "doctor": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts doctor",
-    "bridge:test": "bun packages/opencode-bui-bridge/src/bin/opencode-bui.ts bridge:test",
-    "build": "bun build packages/opencode-bui-bridge/src/bin/opencode-bui.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
-    "lint": "bunx oxlint packages test",
+    "dev": "bun --watch src/bin/opencode-bui.ts start",
+    "dev:telegram": "bun --watch src/standalone-bot.ts",
+    "start": "bun src/bin/opencode-bui.ts start",
+    "start:bridge": "bun src/bin/opencode-bui.ts start",
+    "onboard": "bun src/bin/opencode-bui.ts onboard",
+    "doctor": "bun src/bin/opencode-bui.ts doctor",
+    "bridge:test": "bun src/bin/opencode-bui.ts bridge:test",
+    "build": "bun build src/bin/opencode-bui.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
+    "lint": "bunx oxlint src test",
     "format": "bunx oxfmt --config .oxfmt.json .",
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
     "test": "bunx vitest run",
+    "test:coverage": "bunx vitest run --coverage",
     "test:watch": "bunx vitest",
     "prepare": "husky",
     "commitlint": "commitlint --from HEAD~1 --to HEAD"
@@ -59,6 +56,7 @@
     "@commitlint/cli": "^20.4.2",
     "@commitlint/config-conventional": "^20.4.2",
     "@types/node": "^22.12.0",
+    "@vitest/coverage-v8": "2.1.9",
     "drizzle-kit": "^0.31.5",
     "husky": "^9.1.7",
     "oxfmt": "^0.6.0",

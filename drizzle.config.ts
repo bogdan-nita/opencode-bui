@@ -5,7 +5,7 @@ const dbPath = process.env.BUI_DB_PATH || `${runtimeDir}/opencode-bui.db`;
 
 export default defineConfig({
   out: "./drizzle",
-  schema: "./packages/opencode-bui-bridge/src/infra/db/db.schema.ts",
+  schema: "./src/infra/db/db/db.schema.ts",
   dialect: "sqlite",
   dbCredentials: {
     url: `file:${dbPath}`,

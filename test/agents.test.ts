@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createAgent, listAgents, renderAgentPrompt } from "../packages/opencode-bui-bridge/src/core/agents.js";
+import { createAgent, listAgents, renderAgentPrompt } from "../src/core/agents";
 
 describe("agent templates", () => {
   let dir = "";
