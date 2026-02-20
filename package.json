@@ -5,17 +5,16 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "opencode-bui-bridge": "src/bin/opencode-bui.ts"
+    "opencode-bui-bridge": "src/cli/opencode-bui.ts"
   },
   "scripts": {
-    "dev": "bun --watch src/bin/opencode-bui.ts start",
-    "dev:telegram": "bun --watch src/standalone-bot.ts",
-    "start": "bun src/bin/opencode-bui.ts start",
-    "start:bridge": "bun src/bin/opencode-bui.ts start",
-    "onboard": "bun src/bin/opencode-bui.ts onboard",
-    "doctor": "bun src/bin/opencode-bui.ts doctor",
-    "bridge:test": "bun src/bin/opencode-bui.ts bridge:test",
-    "build": "bun build src/bin/opencode-bui.ts --outdir dist/bin --target bun --format esm --sourcemap --packages external",
+    "dev": "bun --watch src/cli/opencode-bui.ts start",
+    "start": "bun src/cli/opencode-bui.ts start",
+    "start:bridge": "bun src/cli/opencode-bui.ts start",
+    "onboard": "bun src/cli/opencode-bui.ts onboard",
+    "doctor": "bun src/cli/opencode-bui.ts doctor",
+    "bridge:test": "bun src/cli/opencode-bui.ts bridge:test",
+    "build": "bun build src/cli/opencode-bui.ts --outdir dist/cli --target bun --format esm --sourcemap --packages external",
     "lint": "bunx oxlint src test",
     "format": "bunx oxfmt --config .oxfmt.json .",
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",

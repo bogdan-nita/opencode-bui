@@ -20,11 +20,24 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@bin/*": ["src/bin/*"],
-      "@core/*": ["src/core/*"],
-      "@infra/*": ["src/infra/*"],
-      "@bridges/*": ["src/bridges/*"],
-      "@common/*": ["src/common/*"]
+      "@adapters": ["src/adapters"],
+      "@adapters/*": ["src/adapters/*"],
+      "@api": ["src/api"],
+      "@api/*": ["src/api/*"],
+      "@bridge": ["src/bridge"],
+      "@bridge/*": ["src/bridge/*"],
+      "@cli": ["src/cli"],
+      "@cli/*": ["src/cli/*"],
+      "@client": ["src/client"],
+      "@client/*": ["src/client/*"],
+      "@config": ["src/config"],
+      "@config/*": ["src/config/*"],
+      "@database": ["src/database"],
+      "@database/*": ["src/database/*"],
+      "@opencode": ["src/opencode"],
+      "@opencode/*": ["src/opencode/*"],
+      "@runtime": ["src/runtime"],
+      "@runtime/*": ["src/runtime/*"]
     }
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
