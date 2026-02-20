@@ -85,7 +85,7 @@ Bridge command registration includes native BUI commands plus command markdown f
 
 Development hot reload knobs:
 
-- `BUI_DEV_HOT_RELOAD=1` boots bridge using `bun --watch packages/opencode-bui-bridge/src/bin/opencode-bui.ts start`.
+- `BUI_DEV_HOT_RELOAD=1` boots bridge using `bun --watch src/bin/opencode-bui.ts start`.
 - `BUI_PLUGIN_HOT_RELOAD=1` reloads plugin runtime implementation on each tool execution.
 - `BUI_BRIDGE_BOOT_COMMAND` overrides bridge boot command completely.
 

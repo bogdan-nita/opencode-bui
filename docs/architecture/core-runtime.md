@@ -2,13 +2,13 @@
 
 ## Layers
 
-- `packages/opencode-bui-bridge/src/core/domain`: bridge-agnostic models (`BridgeId`, envelopes, refs, capabilities).
-- `packages/opencode-bui-bridge/src/core/ports`: interface contracts only (adapters, stores, clients).
-- `packages/opencode-bui-bridge/src/core/application`: orchestration (runtime, routing, backlog, health, bridge registry).
-- `packages/opencode-bui-bridge/src/infra`: concrete implementations (config loader, runtime fs/process helpers, db, stores, lock, OpenCode client).
-- `packages/opencode-bui-bridge/src/bridges/<name>`: bridge-specific edge adapters and bridge definitions.
-- `packages/opencode-bui-bridge/src/bin`: bridge CLI entrypoints and onboarding.
-- `packages/opencode-bui-plugin/src/plugin`: OpenCode plugin module and tool contract.
+- `src/core/domain`: bridge-agnostic models (`BridgeId`, envelopes, refs, capabilities).
+- `src/core/ports`: interface contracts only (adapters, stores, clients).
+- `src/core/application`: orchestration (runtime, routing, backlog, health, bridge registry).
+- `src/infra`: concrete implementations (config loader, runtime fs/process helpers, db, stores, lock, OpenCode client).
+- `src/bridges/<name>`: bridge-specific edge adapters and bridge definitions.
+- `src/bin`: bridge CLI entrypoints and onboarding.
+- `src/plugin`: OpenCode plugin module and tool contract.
 
 ## Runtime flow
 

@@ -1,32 +1,28 @@
 # AGENTS
 
-## Mission
+- **Developer**: Implement features, fix bugs, build bridges
+- **Reviewer**: Review PRs
+- **Tester**: Write tests
+- **Planner**: Track requirements, coordinate, TDD workflow
 
-Maintain `opencode-bui` as a Bun-first, bridge-agnostic runtime where each bridge owns its own behavior contract.
+## Workflow
 
-## Always follow
+1. **Discuss** - User describes features
+2. **Distill** - Planner captures in REQUIREMENTS.md as `[ ]`
+3. **Plan** - Create tasks in PLAN.md (TDD: test → implement → review)
+4. **Coordinate** - Handoff between agents in sequence
 
-- Keep abstraction boundaries:
-  - bridge-specific logic in `packages/opencode-bui-bridge/src/bridges/<name>/`
-  - orchestration in `packages/opencode-bui-bridge/src/core/application/`
-  - no bridge-type branching in core policy logic
-- Prefer Zod over ad-hoc unknown parsing.
-- Keep naming style: `*.schema.ts`, `*.types.ts`, `*.utils.ts`, `*.test.ts`.
-- Keep Bun-first runtime behavior.
-
-## Required checks before finishing
+## Run
 
 ```bash
-bun run lint
-bun run test
-bun run build
+bun run dev  # Telegram control
+bun run lint && bun run test && bun run build
 ```
 
-## Required docs update triggers
+## Architecture
 
-Update docs in `docs/` when any of these change:
+- Bridge-specific: `src/bridges/<name>/`
+- Core: `src/core/application/`
+- Infra: `src/infra/`
 
-- bridge behavior or onboarding behavior
-- config schema/precedence
-- DB schema/migration workflow
-- runtime operational commands
+No bridge-type branching in core policy.
