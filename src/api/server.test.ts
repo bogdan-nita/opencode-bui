@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPluginBridgeHandler } from "./api";
+import { createPluginBridgeHandler } from "./server";
 
-describe("plugin bridge api", () => {
+describe("plugin bridge server", () => {
   it("responds on health endpoint", async () => {
     const handler = createPluginBridgeHandler({
       token: "secret",

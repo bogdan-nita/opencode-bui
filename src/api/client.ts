@@ -1,7 +1,7 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import { PLUGIN_BRIDGE_RPC_PATH, PLUGIN_BRIDGE_TOKEN_HEADER } from "../api/plugin-bridge.consts";
-import type { PluginBridgeClient } from "../api/api.types";
+import { PLUGIN_BRIDGE_RPC_PATH, PLUGIN_BRIDGE_TOKEN_HEADER } from "./plugin-bridge.consts";
+import type { PluginBridgeClient } from "./server.types";
 import type { PluginBridgeEndpoint } from "./client.types";
 
 export function createPluginBridgeClient(endpoint: PluginBridgeEndpoint): PluginBridgeClient {

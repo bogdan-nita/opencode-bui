@@ -1,8 +1,8 @@
 import { ORPCError, os } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { PLUGIN_BRIDGE_HEALTH_PATH, PLUGIN_BRIDGE_RPC_PATH, PLUGIN_BRIDGE_TOKEN_HEADER } from "./plugin-bridge.consts";
-import { pluginBridgeSendPayloadSchema } from "./api.schema";
-import type { PluginBridgeSendPayload, PluginBridgeSendResult } from "./api.types";
+import { pluginBridgeSendPayloadSchema } from "./server.schema";
+import type { PluginBridgeSendPayload, PluginBridgeSendResult } from "./server.types";
 
 const base = os.$context<{
   token: string;
@@ -69,10 +69,10 @@ export function createPluginBridgeHandler(input: {
   };
 }
 
-export { pluginBridgeSendPayloadSchema } from "./api.schema";
+export { pluginBridgeSendPayloadSchema } from "./server.schema";
 export type {
   PluginBridgeClient,
   PluginBridgeRouter,
   PluginBridgeSendPayload,
   PluginBridgeSendResult,
-} from "./api.types";
+} from "./server.types";

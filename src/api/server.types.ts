@@ -1,7 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 import type { z } from "zod";
-import type { pluginBridgeSendPayloadSchema } from "./api.schema";
-import type { createPluginBridgeRouter } from "./api";
+import type { pluginBridgeSendPayloadSchema } from "./server.schema";
+import type { createPluginBridgeRouter } from "./server";
 
 export type PluginBridgeSendPayload = z.infer<typeof pluginBridgeSendPayloadSchema>;
 
