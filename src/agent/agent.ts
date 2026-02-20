@@ -1,8 +1,8 @@
 import { logger } from "@runtime/logger";
 import { fileExists } from "@runtime/runtime-fs";
-import type { OutboundAttachment } from "@bridge/envelope.types";
+import type { OutboundAttachment } from "@runtime/bridge/types";
 import { isAbsolute, resolve } from "node:path";
-import { opencodeEventSchema } from "./opencode.schema";
+import { opencodeEventSchema } from "./agent.schema";
 import { z } from "zod";
 
 export type RunOpencodeInput = {

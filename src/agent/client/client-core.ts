@@ -1,7 +1,6 @@
 import { createOpencode, createOpencodeClient, type OpencodeClient, type Part } from "@opencode-ai/sdk";
 import { logger } from "@runtime/logger";
-import type { OutboundAttachment } from "@bridge/envelope.types";
-import type { OpenCodeClient } from "@bridge/open-code-client.types";
+import type { OutboundAttachment, OpenCodeClient } from "@runtime/bridge/types";
 import type {
   ClientBootstrapOptions,
   SdkContext,

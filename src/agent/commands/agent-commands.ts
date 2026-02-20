@@ -1,5 +1,5 @@
 import { basename, resolve } from "node:path";
-import type { BridgeCommandDescriptor } from "@bridge/bridge-adapter.types";
+import type { BridgeCommandDescriptor } from "@runtime/bridge/types";
 import type { ConfigDiscovery } from "@config";
 import { fileExists, readDir } from "@runtime/runtime-fs";
 import { logger } from "@runtime/logger";

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
-import { discoverOpencodeCommands, mergeBridgeCommands } from "./opencode-commands";
+import { discoverOpencodeCommands, mergeBridgeCommands } from "./agent-commands";
 
 describe("discoverOpencodeCommands", () => {
   it("loads markdown command files from discovered opencode directories", async () => {

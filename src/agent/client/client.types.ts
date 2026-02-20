@@ -1,4 +1,4 @@
-import type { OutboundAttachment } from "@bridge/envelope.types";
+import type { OutboundAttachment } from "@runtime/bridge/types";
 
 /** Options for bootstrapping the OpenCode client */
 export type ClientBootstrapOptions = {
