@@ -1,9 +1,7 @@
-import type { BridgeAdapter } from "@bridge/bridge-adapter.types";
-import type { InboundEnvelope } from "@bridge/envelope.types";
+import type { BridgeAdapter, InboundEnvelope, PermissionStore } from "@runtime/bridge/types";
 import { conversationKey } from "@runtime/conversation-router";
 import { logger } from "@runtime/logger";
 import type { RuntimeState, PermissionDecision } from "../state/runtime-state.types";
-import type { PermissionStore } from "@bridge/permission-store.types";
 
 export type ResolvePermissionDeps = {
   bridge: BridgeAdapter;

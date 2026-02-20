@@ -7,14 +7,14 @@ import {
   enabledBridges,
   readRuntimeConfig,
   type BridgeName,
-} from "@config";
+} from "@runtime/config";
 import {
   allBridgeDefinitions,
   bridgeDefinitionById,
   createBridgesForConfig,
-} from "@bridge/bridge-registry";
+} from "@runtime/bridge/registry";
 import { startRuntime } from "@runtime";
-import { testBridgeConnectivity } from "@bridge/bridge-test";
+import { testBridgeConnectivity } from "@runtime/bridge/bridge-test";
 import { runOnboarding } from "@cli/onboard";
 import { ensureDir, fileExists } from "@runtime/runtime-fs";
 import { resolve } from "node:path";

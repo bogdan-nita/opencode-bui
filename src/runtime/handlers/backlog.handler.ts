@@ -1,8 +1,4 @@
-import type { BridgeAdapter } from "@bridge/bridge-adapter.types";
-import type { SessionStore } from "@bridge/session-store.types";
-import type { OpenCodeClient } from "@bridge/open-code-client.types";
-import type { AgentStore } from "@bridge/agent-store.types";
-import type { Clock } from "@bridge/clock.types";
+import type { BridgeAdapter, SessionStore, OpenCodeClient, AgentStore, Clock } from "@runtime/bridge/types";
 import type { RuntimeState } from "../state/runtime-state.types";
 import { processEnvelope } from "./envelope.handler";
 

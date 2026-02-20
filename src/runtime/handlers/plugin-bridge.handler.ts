@@ -1,10 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import { writePluginBridgeDiscovery } from "@api/discovery";
-import { createPluginBridgeHandler } from "@api/api";
+import { createPluginBridgeHandler } from "@api";
 import { logger } from "@runtime/logger";
-import type { SessionStore } from "@bridge/session-store.types";
-import type { BridgeAdapter } from "@bridge/bridge-adapter.types";
+import type { SessionStore, BridgeAdapter } from "@runtime/bridge/types";
 
 export type PluginBridgeConfig = {
   runtimeDir: string;

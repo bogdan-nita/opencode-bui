@@ -1,5 +1,5 @@
 import { formatISO } from "date-fns";
-import type { Clock } from "@bridge/clock.types";
+import type { Clock } from "@runtime/bridge/types";
 
 export function createSystemClock(): Clock {
   return {

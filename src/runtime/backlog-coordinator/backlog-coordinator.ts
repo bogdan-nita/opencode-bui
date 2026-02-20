@@ -1,4 +1,4 @@
-import type { InboundEnvelope } from "@bridge/envelope.types";
+import type { InboundEnvelope } from "@runtime/bridge/types";
 import type { BacklogDecision } from "./backlog-coordinator.types";
 
 export function isBacklogMessage(receivedAtUnixSeconds: number, nowUnixSeconds: number, staleSeconds: number): boolean {

@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { splitCommand } from "@bridge/bridge.utils";
-import type { InboundEnvelope, OutboundEnvelope } from "@bridge/envelope.types";
+import { splitCommand } from "@runtime/bridge/utils";
+import type { InboundEnvelope, OutboundEnvelope } from "@runtime/bridge/types";
 import { conversationKey } from "../conversation-router";
 import { AgentStoreService, ClockService, OpenCodeClientService, SessionStoreService } from "@runtime/services";
 import { logger } from "@runtime/logger";

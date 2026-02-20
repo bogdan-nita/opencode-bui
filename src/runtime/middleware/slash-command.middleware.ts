@@ -1,5 +1,5 @@
-import type { InboundEnvelope } from "@bridge/envelope.types";
-import { splitCommand } from "@bridge/bridge.utils";
+import type { InboundEnvelope } from "@runtime/bridge/types";
+import { splitCommand } from "@runtime/bridge/utils";
 import type { PermissionDecision } from "../state/runtime-state.types";
 
 export type ParsedSlashCommand = {

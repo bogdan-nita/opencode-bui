@@ -1,4 +1,4 @@
-import type { LockHandle, LockService } from "@bridge/lock-service.types";
+import type { LockHandle, LockService } from "@runtime/bridge/types";
 import { tryAcquireLock } from "@runtime/lock";
 
 export function createFileLockService(): LockService {

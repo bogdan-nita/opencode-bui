@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isInterruptEvent } from "./interrupt.middleware";
-import type { InboundEnvelope } from "@bridge/envelope.types";
+import type { InboundEnvelope } from "@runtime/bridge/types";
 
 function createEnvelope(event: InboundEnvelope["event"]): InboundEnvelope {
   return {

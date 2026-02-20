@@ -1,8 +1,5 @@
 import { Context } from "effect";
-import type { AgentStore } from "@bridge/agent-store.types";
-import type { Clock } from "@bridge/clock.types";
-import type { OpenCodeClient } from "@bridge/open-code-client.types";
-import type { SessionStore } from "@bridge/session-store.types";
+import type { AgentStore, Clock, OpenCodeClient, SessionStore } from "@runtime/bridge/types";
 
 export class SessionStoreService extends Context.Tag("SessionStoreService")<SessionStoreService, SessionStore>() {}
 

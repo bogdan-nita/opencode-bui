@@ -1,17 +1,12 @@
 import { Effect } from "effect";
 import { stat } from "node:fs/promises";
-import type { BridgeAdapter } from "@bridge/bridge-adapter.types";
-import type { InboundEnvelope, OutboundEnvelope } from "@bridge/envelope.types";
-import { captureScreenshot } from "@bridge/media-coordinator";
+import type { BridgeAdapter, InboundEnvelope, OutboundEnvelope, SessionStore, OpenCodeClient, AgentStore, Clock } from "@runtime/bridge/types";
+import { captureScreenshot } from "@runtime/bridge/media-coordinator";
 import { conversationKey } from "@runtime/conversation-router";
 import { routeInbound } from "@runtime/command-router";
 import { logger } from "@runtime/logger";
 import type { RuntimeState } from "../state/runtime-state.types";
 import { AgentStoreService, ClockService, OpenCodeClientService, SessionStoreService } from "@runtime/services";
-import type { SessionStore } from "@bridge/session-store.types";
-import type { OpenCodeClient } from "@bridge/open-code-client.types";
-import type { AgentStore } from "@bridge/agent-store.types";
-import type { Clock } from "@bridge/clock.types";
 import { silentStartCommands } from "../commands.consts";
 import { parseSlashCommand } from "../middleware/slash-command.middleware";
 

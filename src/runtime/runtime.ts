@@ -1,13 +1,15 @@
-import { createOpenCodeClient } from "@opencode/open-code-client";
-import { discoverOpencodeCommands, mergeBridgeCommands } from "@opencode/opencode-commands";
+import { createOpenCodeClient } from "@agent/client";
+import { discoverOpencodeCommands, mergeBridgeCommands } from "@agent/commands";
 import { createSystemClock } from "@runtime/time/system-clock";
 import { logger } from "@runtime/logger";
-import { createRuntimeDB } from "@database/db";
-import { createLibsqlSessionStore } from "@database/store/libsql-session-store";
-import { createLibsqlAgentStore } from "@database/store/libsql-agent-store";
-import { createFileMediaStore } from "@database/store/file-media-store";
-import { createLibsqlPermissionStore } from "@database/store/libsql-permission-store";
-import { startAllBridges, stopAllBridges, waitForShutdownSignal } from "@bridge/bridge-supervisor";
+import {
+  createRuntimeDB,
+  createFileMediaStore,
+  createLibsqlAgentStore,
+  createLibsqlPermissionStore,
+  createLibsqlSessionStore,
+} from "@database";
+import { startAllBridges, stopAllBridges, waitForShutdownSignal } from "@runtime/bridge/supervisor";
 import type { RuntimeDependencies } from "./runtime.types";
 import { nativeCommands } from "./commands.consts";
 import { createRuntimeState } from "./state/runtime-state";

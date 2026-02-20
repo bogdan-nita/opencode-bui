@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chooseBacklogMessages, isBacklogMessage } from "./backlog-coordinator";
-import type { InboundEnvelope } from "@bridge/envelope.types";
+import type { InboundEnvelope } from "@runtime/bridge/types";
 
 describe("backlog coordinator", () => {
   it("flags stale messages by threshold", () => {

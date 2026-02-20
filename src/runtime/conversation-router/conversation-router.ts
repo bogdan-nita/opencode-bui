@@ -1,4 +1,4 @@
-import type { ConversationRef } from "@bridge/bridge.types";
+import type { ConversationRef } from "@runtime/bridge/types";
 
 export function conversationKey(conversation: ConversationRef): string {
   return `${conversation.bridgeId}:${conversation.channelId}${conversation.threadId ? `:${conversation.threadId}` : ""}`;

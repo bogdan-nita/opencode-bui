@@ -1,4 +1,4 @@
-import type { BridgeCommandDescriptor } from "@bridge/bridge-adapter.types";
+import type { BridgeCommandDescriptor } from "@runtime/bridge/types";
 
 export const nativeCommands: BridgeCommandDescriptor[] = [
   { command: "start", description: "Show bot help" },

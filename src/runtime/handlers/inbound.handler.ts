@@ -1,6 +1,5 @@
-import type { BridgeAdapter, BridgeRuntimeHandlers } from "@bridge/bridge-adapter.types";
-import type { InboundEnvelope } from "@bridge/envelope.types";
-import { bridgeDefinitionById } from "@bridge/bridge-registry";
+import type { BridgeAdapter, BridgeRuntimeHandlers, InboundEnvelope, SessionStore, OpenCodeClient, PermissionStore, MediaStore, AgentStore, Clock } from "@runtime/bridge/types";
+import { bridgeDefinitionById } from "@runtime/bridge/registry";
 import { conversationKey } from "@runtime/conversation-router";
 import { chooseBacklogMessages, isBacklogMessage } from "@runtime/backlog-coordinator";
 import { logger } from "@runtime/logger";
@@ -11,13 +10,7 @@ import { parseSlashCommand, parsePermissionResponseFromText } from "../middlewar
 import { processEnvelope } from "./envelope.handler";
 import { flushBacklog } from "./backlog.handler";
 import { resolvePermissionDecision } from "./permission.handler";
-import type { RuntimeConfig } from "@config";
-import type { SessionStore } from "@bridge/session-store.types";
-import type { OpenCodeClient } from "@bridge/open-code-client.types";
-import type { PermissionStore } from "@bridge/permission-store.types";
-import type { MediaStore } from "@bridge/media-store.types";
-import type { AgentStore } from "@bridge/agent-store.types";
-import type { Clock } from "@bridge/clock.types";
+import type { RuntimeConfig } from "@runtime/config";
 
 export type InboundHandlerDeps = {
   bridges: BridgeAdapter[];

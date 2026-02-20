@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startRuntime } from "./runtime";
-import type { BridgeAdapter, BridgeRuntimeHandlers } from "@bridge/bridge-adapter.types";
-import type { RuntimeConfig } from "@config";
+import type { BridgeAdapter, BridgeRuntimeHandlers } from "@runtime/bridge/types";
+import type { RuntimeConfig } from "@runtime/config";
 
 function createTestConfig(root: string): RuntimeConfig {
   return {
@@ -89,7 +89,7 @@ describe("bui runtime", () => {
       },
     };
 
-    const createClientMock = vi.spyOn(await import("@opencode/open-code-client"), "createOpenCodeClient").mockReturnValue({
+    const createClientMock = vi.spyOn(await import("@agent/client"), "createOpenCodeClient").mockReturnValue({
       async createSession() {
         return { sessionId: "s1", text: "ready" };
       },

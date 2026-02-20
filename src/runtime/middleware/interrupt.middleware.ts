@@ -1,5 +1,5 @@
-import type { InboundEnvelope } from "@bridge/envelope.types";
-import { splitCommand } from "@bridge/bridge.utils";
+import type { InboundEnvelope } from "@runtime/bridge/types";
+import { splitCommand } from "@runtime/bridge/utils";
 
 export function isInterruptEvent(envelope: InboundEnvelope): boolean {
   if (envelope.event.type === "slash") {

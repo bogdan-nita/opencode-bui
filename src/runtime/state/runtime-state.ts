@@ -1,4 +1,4 @@
-import type { InboundEnvelope } from "@bridge/envelope.types";
+import type { InboundEnvelope } from "@runtime/bridge/types";
 import type { RuntimeState } from "./runtime-state.types";
 import { logger } from "@runtime/logger";
 
