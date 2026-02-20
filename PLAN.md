@@ -1,56 +1,86 @@
 # Plan
 
-## Status: ✅ All refactoring complete
+## Status: ✅ Complete
 
 - [x] Lint: 0 warnings, 0 errors
-- [x] Tests: 112 passed
-- [x] Build: Pass
+- [x] Tests: 110 passed
+- [x] Build: Success
 
-## Completed
+## Final Structure
 
-### 1. Split runtime/runtime.ts (1058 → 98 lines)
-- [x] Extract to handlers/ folder [developer]
-- [x] Extract to middleware/ folder [developer]
-- [x] Extract to state/ folder [developer]
+```
+src/
+├── main.ts              # Composition root - wires all modules
+│
+├── cli/                 # Command parsing
+│   ├── opencode-bui.ts     # CLI entrypoint
+│   └── onboard/            # Setup wizard
+│
+├── api/                 # External interface
+│   ├── server.ts           # RPC server
+│   ├── client.ts           # Plugin client SDK
+│   └── discovery/          # Service discovery
+│
+├── agent/               # Agent runtime (OpenCode)
+│   ├── client/             # Spawn/control agents
+│   ├── commands/           # Command discovery
+│   └── agent.ts            # Event parsing
+│
+├── runtime/             # Core orchestrator
+│   ├── runtime.ts          # Main entry
+│   ├── config/             # Config loading
+│   ├── bridge/             # Bridge framework
+│   │   ├── adapters/       # telegram, discord
+│   │   ├── registry/
+│   │   └── supervisor/
+│   ├── handlers/
+│   ├── middleware/
+│   ├── logger/
+│   └── services/
+│
+└── database/            # Storage
+    ├── db.ts               # Database connection
+    ├── schema.ts           # Table definitions
+    ├── session-store.ts
+    ├── permission-store.ts
+    └── media-store.ts
+```
 
-### 2. Split opencode/open-code-client.ts (799 → 38 lines)
-- [x] Split into client-core.ts, client.utils.ts, client.types.ts, client.schema.ts [developer]
-- [x] Extract types to schema file [developer]
+## Completed Tasks
 
-### 3. Split config/config.utils.ts (512 → deleted)
-- [x] Extract path resolution to config/paths.ts [developer]
-- [x] Extract env loading to config/env.ts [developer]
-- [x] Extract config merging to config/merge.ts [developer]
-- [x] Extract validation to config/validation.ts [developer]
+### 1. Module entrypoints ✅
+- [x] runtime/index.ts exports startRuntime()
+- [x] database/index.ts exports createRuntimeDB(), stores
+- [x] api/index.ts exports server + client
+- [x] agent/index.ts exports createOpenCodeClient()
 
-### 4. Split telegram.bridge.ts (398 → 160 lines)
-- [x] Extract handlers to adapters/telegram/handlers/ [developer]
-- [x] Extract middleware to adapters/telegram/middleware/ [developer]
+### 2. Composition root ✅
+- [x] Created src/main.ts
 
-### 5. Split discord.bridge.ts (370 → 198 lines)
-- [x] Extract handlers to adapters/discord/handlers/ [developer]
-- [x] Extract middleware to adapters/discord/middleware/ [developer]
+### 3. Database reorganized ✅
+- [x] Flattened db/* → database/
+- [x] Flattened store/* → database/
 
-### 6. Fix barrel files
-- [x] Remove config/config.ts [developer]
-- [x] Remove bridge-definition/bridge-definition.ts [developer]
-- [x] Remove runtime/services/services.ts [developer]
+### 4. Adapters moved ✅
+- [x] adapters/ → runtime/bridge/adapters/
 
-### 7. Consolidate tiny type files
-- [x] Merge telegram.types.ts into telegram.schema.ts [developer]
-- [x] Merge discord.types.ts into discord.schema.ts [developer]
+### 5. Bridge framework moved ✅
+- [x] bridge/* → runtime/bridge/
 
-### 8. Fix broken imports (found by reviewer)
-- [x] Fix @config/config/config.types → @config/config.types [developer]
-- [x] Fix @config/config → @config [developer]
-- [x] Fix ../../ports/bridge-adapter.types → @bridge/bridge-adapter.types [developer]
-- [x] Fix ../domain/bridge.types → ./bridge.types [developer]
-- [x] Fix ../../ports/open-code-client.types → @bridge/open-code-client.types [developer]
+### 6. Config moved ✅
+- [x] config/* → runtime/config/
 
-### 9. Fix lint warnings
-- [x] Fix `as any` casts in test files [developer]
+### 7. opencode renamed ✅
+- [x] opencode/ → agent/
 
-### 10. Validate
-- [x] Lint: 0 warnings, 0 errors [reviewer]
-- [x] Tests: 112 passed [tester]
-- [x] Build: Success [reviewer]
+### 8. Client merged ✅
+- [x] client/ → api/
+
+### 9. Imports updated ✅
+- [x] tsconfig.json paths
+- [x] All imports fixed
+
+### 10. Validated ✅
+- [x] Lint: 0 errors
+- [x] Tests: 110 passed
+- [x] Build: Success
