@@ -7,19 +7,19 @@ import {
   enabledBridges,
   readRuntimeConfig,
   type BridgeName,
-} from "@runtime/config";
+} from "@infra/config";
 import {
   allBridgeDefinitions,
   bridgeDefinitionById,
   createBridgesForConfig,
-} from "@runtime/bridge/registry";
-import { startRuntime } from "@runtime";
-import { testBridgeConnectivity } from "@runtime/bridge/bridge-test";
+} from "@bridge/registry";
+import { startRuntime } from "@core";
+import { testBridgeConnectivity } from "@bridge/bridge-test";
 import { runOnboarding } from "@cli/onboard";
-import { ensureDir, fileExists } from "@runtime/runtime-fs";
+import { ensureDir, fileExists } from "@infra/fs";
 import { resolve } from "node:path";
-import { logger } from "@runtime/logger";
-import { createFileLockService } from "@runtime/lock/file-lock-service";
+import { logger } from "@infra/logger";
+import { createFileLockService } from "@infra/lock/file-lock-service";
 
 const cli = cac("opencode-bui-bridge");
 

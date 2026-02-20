@@ -10,7 +10,7 @@ import {
   readRuntimeConfig,
   resetRuntimeConfigCache,
   resolvePaths,
-} from "../src/runtime/config";
+} from "../src/infra/config";
 
 describe("config", () => {
   let tempDir = "";

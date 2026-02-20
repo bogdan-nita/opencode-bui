@@ -1,17 +1,11 @@
-// Database connection and types
-export { createRuntimeDB, resolveMigrationsFolder } from "./db";
-export type { RuntimeDB, RuntimeDBFactoryOptions } from "./types";
+export { createRuntimeDB, resolveMigrationsFolder } from "./client/client";
+export type { RuntimeDB, RuntimeDBFactoryOptions } from "./client/client.types";
 
-// Schema exports
-export {
-  agentTemplatesTable,
-  conversationSessionsTable,
-  permissionRequestsTable,
-  sessionWorkdirsTable,
-} from "./schema";
+export { createLibsqlSessionStore } from "./entities/session/session.store";
+export { createLibsqlPermissionStore } from "./entities/permission/permission.store";
+export { createLibsqlAgentStore } from "./entities/agent/agent.store";
+export { createFileMediaStore } from "./entities/media/media.store";
 
-// Store factories
-export { createFileMediaStore } from "./media-store";
-export { createLibsqlAgentStore } from "./agent-store";
-export { createLibsqlPermissionStore } from "./permission-store";
-export { createLibsqlSessionStore } from "./session-store";
+export { conversationSessionsTable, sessionWorkdirsTable } from "./entities/session/session.schema";
+export { permissionRequestsTable } from "./entities/permission/permission.schema";
+export { agentTemplatesTable } from "./entities/agent/agent.schema";

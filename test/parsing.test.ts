@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isSlashCommand, splitCommand, splitLongText } from "../src/runtime/bridge/utils/bridge.utils";
-import { buildTextInbound } from "../src/runtime/bridge/adapters/telegram/telegram.utils";
+import { isSlashCommand, splitCommand, splitLongText } from "../src/bridge/utils/bridge.utils";
+import { buildTextInbound } from "../src/bridge/adapters/telegram/telegram.utils";
 
 describe("command parsing", () => {
   it("detects slash command", () => {

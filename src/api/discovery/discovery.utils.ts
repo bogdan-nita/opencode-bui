@@ -1,6 +1,6 @@
 import { dirname, resolve } from "node:path";
 import { chmod, readFile, writeFile } from "node:fs/promises";
-import { ensureDir, fileExists } from "@runtime/runtime-fs";
+import { ensureDir, fileExists } from "@infra/fs/runtime-fs";
 import { pluginBridgeDiscoverySchema } from "./discovery.schema";
 import type { PluginBridgeDiscovery } from "./discovery.types";
 

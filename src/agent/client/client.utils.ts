@@ -1,7 +1,7 @@
 import { isAbsolute, resolve } from "node:path";
 import { stat } from "node:fs/promises";
-import { fileExists } from "@runtime/runtime-fs";
-import type { OutboundAttachment } from "@runtime/bridge/types";
+import { fileExists } from "@infra/fs/runtime-fs";
+import type { OutboundAttachment } from "@bridge/types";
 import type { ToolPart } from "@opencode-ai/sdk";
 import type {
   OpencodeEvent,

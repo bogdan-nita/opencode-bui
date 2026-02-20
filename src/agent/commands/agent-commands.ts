@@ -1,8 +1,8 @@
 import { basename, resolve } from "node:path";
-import type { BridgeCommandDescriptor } from "@runtime/bridge/types";
+import type { BridgeCommandDescriptor } from "@bridge/types";
 import type { ConfigDiscovery } from "@config";
-import { fileExists, readDir } from "@runtime/runtime-fs";
-import { logger } from "@runtime/logger";
+import { fileExists, readDir } from "@infra/fs/runtime-fs";
+import { logger } from "@infra/logger";
 
 function normalizeCommandName(input: string): string | undefined {
   const raw = input.trim().toLowerCase().replaceAll("-", "_");

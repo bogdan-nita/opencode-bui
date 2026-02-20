@@ -4,14 +4,14 @@
  * Wires together all top-level modules: database, api, agent, runtime
  */
 
-import { discoverConfigContext, readRuntimeConfig, enabledBridges, type BridgeName } from "@runtime/config";
-import { bridgeDefinitionById, createBridgesForConfig } from "@runtime/bridge/registry";
-import { startRuntime } from "@runtime";
+import { discoverConfigContext, readRuntimeConfig, enabledBridges, type BridgeName } from "@infra/config";
+import { bridgeDefinitionById, createBridgesForConfig } from "@bridge/registry";
+import { startRuntime } from "@core";
 import { createRuntimeDB } from "@database";
 import { createPluginBridgeClient } from "@api/client";
 import { createOpenCodeClient } from "@agent";
-import { ensureDir, fileExists } from "@runtime/runtime-fs";
-import { logger } from "@runtime/logger";
+import { ensureDir, fileExists } from "@infra/fs";
+import { logger } from "@infra/logger";
 import { resolve } from "node:path";
 
 export interface MainOptions {
@@ -95,7 +95,7 @@ export async function needsOnboarding(cwd: string): Promise<boolean> {
 }
 
 // Re-export for convenience
-export { startRuntime } from "@runtime";
+export { startRuntime } from "@core";
 export { createRuntimeDB } from "@database";
 export { createOpenCodeClient } from "@agent";
 export { createPluginBridgeClient } from "@api/client";

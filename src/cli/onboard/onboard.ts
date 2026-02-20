@@ -1,9 +1,9 @@
 import { confirm, isCancel, select, text } from "@clack/prompts";
 import { basename, dirname, resolve } from "node:path";
-import { discoverConfigContext, readRuntimeConfig } from "@runtime/config";
-import { ensureDir, fileExists, writeTextFile } from "@runtime/runtime-fs";
-import { allBridgeDefinitions } from "@runtime/bridge/registry";
-import type { BridgeName } from "@runtime/config";
+import { discoverConfigContext, readRuntimeConfig } from "@infra/config";
+import { ensureDir, fileExists, writeTextFile } from "@infra/fs";
+import { allBridgeDefinitions } from "@bridge/registry";
+import type { BridgeName } from "@infra/config";
 import type { OnboardResult } from "./onboard.types";
 
 async function writeIfMissing(path: string, content: string): Promise<void> {
