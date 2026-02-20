@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { formatISO } from "date-fns";
 import { sortBy } from "remeda";
-import type { AgentStore } from "@bridge/agent-store.types";
-import { agentTemplatesTable } from "@database/db";
-import type { RuntimeDB } from "@database/db";
+import type { AgentStore } from "@runtime/bridge/types";
+import { agentTemplatesTable } from "./schema";
+import type { RuntimeDB } from "./types";
 
 function sanitizeName(input: string): string {
   return input

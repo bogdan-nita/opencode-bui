@@ -4,12 +4,12 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fileExists } from "@runtime/runtime-fs";
-import { REQUIRED_TABLE_STATEMENTS } from "./db.consts";
-import type { RuntimeDB, RuntimeDBFactoryOptions } from "./db.types";
+import { REQUIRED_TABLE_STATEMENTS } from "./consts";
+import type { RuntimeDB, RuntimeDBFactoryOptions } from "./types";
 
 export async function resolveMigrationsFolder(): Promise<string | undefined> {
   const moduleDir = fileURLToPath(new URL(".", import.meta.url));
-  const candidates = [resolve(process.cwd(), "drizzle"), resolve(moduleDir, "../../../../drizzle")];
+  const candidates = [resolve(process.cwd(), "drizzle"), resolve(moduleDir, "../../drizzle")];
   for (const candidate of candidates) {
     if (await fileExists(candidate)) {
       return candidate;
@@ -40,11 +40,3 @@ export async function createRuntimeDB(dbPath: string, options?: RuntimeDBFactory
     db,
   };
 }
-
-export {
-  agentTemplatesTable,
-  conversationSessionsTable,
-  permissionRequestsTable,
-  sessionWorkdirsTable,
-} from "./db.schema";
-export type { RuntimeDB, RuntimeDBFactoryOptions } from "./db.types";

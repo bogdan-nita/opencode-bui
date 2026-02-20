@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { formatISO } from "date-fns";
-import { permissionRequestsTable } from "@database/db";
-import type { RuntimeDB } from "@database/db";
-import type { PermissionStore } from "@bridge/permission-store.types";
+import { permissionRequestsTable } from "./schema";
+import type { RuntimeDB } from "./types";
+import type { PermissionStore } from "@runtime/bridge/types";
 
 function nowIso(): string {
   return formatISO(new Date());

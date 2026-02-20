@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { MediaStore } from "@bridge/media-store.types";
+import type { MediaStore } from "@runtime/bridge/types";
 import { ensureDir, writeBytesFile } from "@runtime/runtime-fs";
 
 function sanitizeFileName(value: string): string {

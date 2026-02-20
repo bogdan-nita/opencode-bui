@@ -1,10 +1,9 @@
 import { eq } from "drizzle-orm";
 import { formatISO } from "date-fns";
-import type { ConversationRef } from "@bridge/bridge.types";
+import type { ConversationRef, SessionMapping, SessionStore } from "@runtime/bridge/types";
 import { conversationKey } from "@runtime/conversation-router";
-import type { SessionMapping, SessionStore } from "@bridge/session-store.types";
-import { conversationSessionsTable, sessionWorkdirsTable } from "@database/db";
-import type { RuntimeDB } from "@database/db";
+import { conversationSessionsTable, sessionWorkdirsTable } from "./schema";
+import type { RuntimeDB } from "./types";
 
 function nowIso(): string {
   return formatISO(new Date());
