@@ -8,9 +8,10 @@
 ## Workflow
 
 1. **Discuss** - User describes features
-2. **Distill** - Planner captures in REQUIREMENTS.md as `[ ]`
-3. **Plan** - Create tasks in PLAN.md (TDD: test → implement → review)
-4. **Coordinate** - Handoff between agents in sequence
+2. **Design** - Create design doc in `docs/plans/YYYY-MM-DD-<topic>-design.md`
+3. **Plan** - Create implementation plan with bite-sized tasks
+4. **Implement** - Execute plan with TDD
+5. **Review** - Code review before merge
 
 ## Run
 
@@ -21,8 +22,4 @@ bun run lint && bun run test && bun run build
 
 ## Architecture
 
-- Bridge-specific: `src/bridges/<name>/`
-- Core: `src/core/application/`
-- Infra: `src/infra/`
-
-No bridge-type branching in core policy.
+See `docs/architecture/README.md` for current structure.
