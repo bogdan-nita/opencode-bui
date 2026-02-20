@@ -15,38 +15,48 @@ bun run start    # Production start
 
 ```
 src/
-├── bin/              # CLI entrypoints
-│   └── onboard/     # First-time setup
-├── bridges/         # Bridge implementations
-│   ├── telegram/    # Telegram bridge
-│   └── discord/    # Discord bridge
-├── core/            # Core runtime (bridge-agnostic)
-│   ├── application/ # Orchestration services
-│   ├── agents/      # Agent definitions
-│   ├── config/     # Config module
-│   ├── domain/     # Domain models
-│   ├── lock/       # Locking primitives
-│   ├── opencode/   # OpenCode integration
-│   └── store/      # Store interfaces
-├── infra/           # Infrastructure
-│   ├── config/     # Config loading
-│   ├── db/        # Database (LibSQL + Drizzle)
-│   ├── lock/      # File lock service
-│   ├── opencode/  # OpenCode client & commands
-│   ├── plugin-bridge/ # Plugin-bridge API
-│   ├── runtime/   # Logger, FS, Process
-│   ├── store/     # LibSQL stores
-│   └── time/      # Time utilities
-├── common/         # Shared utilities
-├── plugin/         # OpenCode plugin
-└── bridge-client/  # Bridge client SDK
+├── main.ts              # Composition root
+├── cli/                 # CLI entrypoints
+│   └── onboard/        # First-time setup
+├── core/                # Runtime orchestrator
+│   ├── runtime/        # Main runtime logic
+│   ├── handlers/       # Request handlers
+│   ├── state/          # Runtime state
+│   ├── services/       # Shared services
+│   └── middleware/     # Request middleware
+├── agent/               # OpenCode client integration
+│   ├── agent/          # Agent implementation
+│   ├── client/         # OpenCode client
+│   └── commands/       # Command discovery
+├── api/                 # Plugin-bridge API
+│   ├── server/         # API server
+│   ├── client/         # API client
+│   └── discovery/      # Service discovery
+├── bridge/              # Bridge system
+│   ├── adapters/       # Telegram, Discord
+│   ├── registry/       # Bridge registry
+│   ├── supervisor/     # Lifecycle management
+│   └── types/          # Bridge types
+├── database/            # Storage layer
+│   ├── client/         # DB connection
+│   └── entities/       # Session, Permission, Agent, Media
+└── infra/               # Infrastructure
+    ├── config/         # Config loading
+    ├── logger/         # Logging
+    ├── fs/             # File system
+    ├── lock/           # Locking primitives
+    ├── process/        # Process utilities
+    └── time/           # Clock, time utilities
 ```
 
 ## Architecture
 
-- **Bridge-agnostic core**: `src/core/application/` contains orchestration
-- **Bridge-owned behavior**: Each bridge owns its behavior contract in `src/bridges/<name>/`
-- **No bridge-type branching** in core policy logic
+- **Core orchestrator**: `src/core/` contains main runtime logic
+- **Bridge system**: `src/bridge/` handles Telegram/Discord adapters
+- **Agent integration**: `src/agent/` manages OpenCode client
+- **API server**: `src/api/` provides plugin-bridge interface
+- **Storage layer**: `src/database/` with LibSQL + Drizzle
+- **Infrastructure**: `src/infra/` for config, logger, fs, etc.
 
 ### Key Modules
 
