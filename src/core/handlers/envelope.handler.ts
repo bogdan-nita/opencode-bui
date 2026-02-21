@@ -1,7 +1,5 @@
 import { Effect } from "effect";
-import { stat } from "node:fs/promises";
 import type { BridgeAdapter, InboundEnvelope, OutboundEnvelope, SessionStore, OpenCodeClient, AgentStore, Clock } from "@bridge/types";
-import { captureScreenshot } from "@bridge/media-coordinator";
 import { conversationKey } from "@core/conversation-router";
 import { routeInbound } from "@core/command-router";
 import { logger } from "@infra/logger";
@@ -9,6 +7,10 @@ import type { RuntimeState } from "../state/runtime-state.types";
 import { AgentStoreService, ClockService, OpenCodeClientService, SessionStoreService } from "@core/services";
 import { silentStartCommands } from "../runtime/commands.consts";
 import { parseSlashCommand } from "../middleware/slash-command.middleware";
+import { startTypingIndicator, stopTypingIndicator } from "./envelope/typing/typing";
+import { createActivityTracker } from "./envelope/activity/activity";
+import { sendOutboundMessages } from "./envelope/outbound/outbound";
+import { captureAndAnalyzeScreenshot } from "./envelope/screenshot/screenshot";
 
 export type ProcessEnvelopeDeps = {
   bridge: BridgeAdapter;
@@ -21,12 +23,6 @@ export type ProcessEnvelopeDeps = {
   config: {
     uploadDir: string;
   };
-};
-
-export type ActivityState = {
-  queue: string[];
-  lines: string[];
-  messageToken: string | undefined;
 };
 
 function parseEnvInt(value: string | undefined, defaultValue: number): number {
@@ -56,45 +52,33 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
   const activityFlushIntervalMs = parseEnvInt(process.env.BUI_ACTIVITY_FLUSH_INTERVAL_MS, 1200);
   const maxActivityLinesPerFlush = parseEnvInt(process.env.BUI_ACTIVITY_LINES_PER_MESSAGE, 8);
   const activityRetainLines = parseEnvInt(process.env.BUI_ACTIVITY_RETAIN_LINES, 24);
-  const activityState: ActivityState = {
-    queue: [],
-    lines: [],
-    messageToken: undefined,
+
+  const activityConfig = {
+    flushIntervalMs: activityFlushIntervalMs,
+    maxLinesPerFlush: maxActivityLinesPerFlush,
+    retainLines: activityRetainLines,
   };
+
+  const activityState = createActivityTracker(activityConfig);
   let flushTimer: ReturnType<typeof setTimeout> | undefined;
   let flushing = Promise.resolve();
-  let stopTyping: (() => Promise<void> | void) | undefined;
 
   const typingEnabled = process.env.BUI_TYPING_INDICATOR !== "0";
-  const startTypingIndicator = async () => {
-    if (!typingEnabled || !bridge.beginTyping || stopTyping) {
-      return;
-    }
-    try {
-      stopTyping = await bridge.beginTyping(envelope.conversation);
-      logger.info({ bridgeId: envelope.bridgeId, conversation: key }, "[bui] Typing indicator started.");
-    } catch (error) {
-      logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to start typing indicator.");
-    }
+  let stopTyping: (() => Promise<void> | void) | undefined;
+
+  const doStartTyping = async () => {
+    if (!typingEnabled) return;
+    stopTyping = await startTypingIndicator({ bridge, conversation: envelope.conversation });
   };
 
-  const stopTypingIndicator = async () => {
-    if (!stopTyping) {
-      return;
-    }
-    try {
-      await stopTyping();
-      logger.info({ bridgeId: envelope.bridgeId, conversation: key }, "[bui] Typing indicator stopped.");
-    } catch (error) {
-      logger.warn({ error, bridgeId: envelope.bridgeId, conversation: key }, "[bui] Failed to stop typing indicator.");
-    } finally {
-      stopTyping = undefined;
-    }
+  const doStopTyping = async () => {
+    await stopTypingIndicator(stopTyping);
+    stopTyping = undefined;
   };
 
-  await startTypingIndicator();
+  await doStartTyping();
 
-  const flushActivity = async (): Promise<void> => {
+  const doFlushActivity = async (): Promise<void> => {
     if (activityState.queue.length === 0) {
       return;
     }
@@ -114,17 +98,17 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
       });
     }
     if (activityState.queue.length > 0) {
-      flushing = flushing.then(() => flushActivity());
+      flushing = flushing.then(() => doFlushActivity());
     }
   };
 
-  const scheduleActivityFlush = () => {
+  const doScheduleActivityFlush = () => {
     if (flushTimer) {
       return;
     }
     flushTimer = setTimeout(() => {
       flushTimer = undefined;
-      flushing = flushing.then(() => flushActivity());
+      flushing = flushing.then(() => doFlushActivity());
     }, activityFlushIntervalMs);
   };
 
@@ -151,16 +135,14 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
     onActivity: async (line) => {
       logger.info({ bridgeId: envelope.bridgeId, conversation: key, activity: line }, "[bui] OpenCode activity event.");
       activityState.queue.push(line);
-      scheduleActivityFlush();
+      doScheduleActivityFlush();
     },
     onPermissionRequest: async (permission) => {
       logger.info({ bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, type: permission.type }, "[bui] Permission request received from OpenCode.");
-      await stopTypingIndicator();
+      await doStopTyping();
       const permissionTimeoutMsRaw = Number.parseInt(process.env.BUI_PERMISSION_TIMEOUT_MS || "600000", 10);
       const permissionTimeoutMs = Number.isFinite(permissionTimeoutMsRaw) && permissionTimeoutMsRaw > 0 ? permissionTimeoutMsRaw : 600000;
 
-      // Note: permissionStore and pendingPermissions are handled in the main runtime
-      // This is a callback that will be awaited
       return await new Promise<"once" | "always" | "reject">((resolvePermission) => {
         const previous = state.pendingPermissions.get(permission.id);
         if (previous) {
@@ -186,14 +168,14 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
         state.pendingPermissions.set(permission.id, {
           conversationKey: key,
           requesterUserId: envelope.user.id,
-          resolve: (response) => {
+          resolve: (response: "once" | "always" | "reject") => {
             clearTimeout(timer);
             state.pendingPermissions.delete(permission.id);
             logger.info(
               { bridgeId: envelope.bridgeId, conversation: key, permissionId: permission.id, response },
               "[bui] Resolving pending permission response.",
             );
-            void startTypingIndicator();
+            void doStartTyping();
             resolvePermission(response);
           },
           timer,
@@ -201,7 +183,6 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
 
         state.lastPermissionByConversation.set(key, permission.id);
 
-        // Send permission request to user
         const permissionLines = [
           "Permission required",
           `- Request ID: ${permission.id}`,
@@ -257,14 +238,14 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
       flushTimer = undefined;
     }
     await flushing;
-    await flushActivity();
+    await doFlushActivity();
   } catch (error) {
     if (flushTimer) {
       clearTimeout(flushTimer);
       flushTimer = undefined;
     }
     await flushing;
-    await flushActivity();
+    await doFlushActivity();
     const message = error instanceof Error
       ? error.message
       : typeof error === "string"
@@ -310,7 +291,7 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
     });
     return;
   } finally {
-    await stopTypingIndicator();
+    await doStopTyping();
     const active = state.activeRuns.get(key);
     if (active === controller) {
       state.activeRuns.delete(key);
@@ -327,6 +308,7 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
   }
 
   logger.info({ bridgeId: envelope.bridgeId, conversation: key, outboundCount: outbound.length }, "[bui] Outbound responses generated.");
+
   const maxAttachmentsPerMessage = parseEnvInt(process.env.BUI_MAX_ATTACHMENTS_PER_MESSAGE, 6);
   const maxAttachmentBytes = parseEnvInt(process.env.BUI_MAX_ATTACHMENT_BYTES, 10485760);
 
@@ -343,94 +325,18 @@ export async function processEnvelope(deps: ProcessEnvelopeDeps): Promise<void> 
       "[bui] Sending outbound message to bridge.",
     );
 
-    let sanitizedMessage = message;
-    if (message.attachments && message.attachments.length > 0) {
-      const kept = [] as NonNullable<typeof message.attachments>;
-      const skipped: string[] = [];
-      for (const attachment of message.attachments.slice(0, maxAttachmentsPerMessage)) {
-        let size = -1;
-        try {
-          const details = await stat(attachment.filePath);
-          size = details.size;
-        } catch {
-          skipped.push(`${attachment.filePath} (missing)`);
-          continue;
-        }
-        if (size > maxAttachmentBytes) {
-          skipped.push(`${attachment.filePath} (too large)`);
-          continue;
-        }
-        kept.push(attachment);
-      }
-      if (message.attachments.length > maxAttachmentsPerMessage) {
-        skipped.push(`${message.attachments.length - maxAttachmentsPerMessage} attachment(s) omitted by limit`);
-      }
-      sanitizedMessage = kept.length > 0 ? { ...message, attachments: kept } : (() => {
-        const withoutAttachments = { ...message };
-        delete withoutAttachments.attachments;
-        return withoutAttachments;
-      })();
-      if (skipped.length > 0) {
-        await bridge.send({
-          bridgeId: envelope.bridgeId,
-          conversation: envelope.conversation,
-          text: ["Some attachments were skipped:", ...skipped.map((line) => `- ${line}`)].join("\n"),
-        });
-      }
-    }
+    await sendOutboundMessages(
+      { bridge, conversation: envelope.conversation },
+      [message],
+      { maxAttachmentsPerMessage, maxAttachmentBytes },
+    );
 
-    try {
-      await bridge.send(sanitizedMessage);
-      logger.info({ bridgeId: envelope.bridgeId, conversation: key }, "[bui] Outbound message sent.");
-    } catch (error) {
-      logger.error({ error, bridgeId: bridge.id }, "[bui] Failed to send outbound message.");
-      continue;
-    }
-    if (message.meta?.["action"] === "capture-screenshot") {
-      const note = message.meta?.["note"];
-      try {
-        const path = await captureScreenshot(config.uploadDir, {
-          conversationId: key,
-          ...(note ? { note } : {}),
-        });
-        logger.info({ path, bridgeId: envelope.bridgeId }, "[bui] Screenshot captured.");
-
-        await bridge.send({
-          bridgeId: envelope.bridgeId,
-          conversation: envelope.conversation,
-          attachments: [
-            {
-              kind: "image",
-              filePath: path,
-              caption: "Captured screenshot",
-            },
-          ],
-          text: "Screenshot captured and sent. Analyzing...",
-        });
-
-        const mapping = await sessionStore.getSessionByConversation(envelope.conversation);
-        const result = await openCodeClient.runPrompt({
-          conversationKey: key,
-          prompt: `User shared a local screenshot at ${path}${note ? `\nNote: ${note}` : ""}. Analyze and help.`,
-          ...(mapping?.sessionId ? { sessionId: mapping.sessionId } : {}),
-          ...(mapping?.cwd ? { cwd: mapping.cwd } : {}),
-        });
-        if (result.sessionId && result.sessionId !== mapping?.sessionId) {
-          await sessionStore.setSessionForConversation(envelope.conversation, result.sessionId, mapping?.cwd);
-        }
-        await bridge.send({
-          bridgeId: envelope.bridgeId,
-          conversation: envelope.conversation,
-          text: result.text || "No text returned.",
-        });
-      } catch (error) {
-        logger.error({ error, bridgeId: envelope.bridgeId }, "[bui] Screenshot pipeline failed.");
-        await bridge.send({
-          bridgeId: envelope.bridgeId,
-          conversation: envelope.conversation,
-          text: "Screenshot capture/send failed. Check runtime logs for details.",
-        });
-      }
-    }
+    await captureAndAnalyzeScreenshot(message, {
+      bridge,
+      conversation: envelope.conversation,
+      sessionStore,
+      openCodeClient,
+      uploadDir: config.uploadDir,
+    });
   }
 }

@@ -22,23 +22,18 @@ core/handlers/
 │   ├── typing/
 │   │   ├── typing.ts            # Start/stop typing indicator
 │   │   ├── typing.test.ts
-│   │   └── index.ts
 │   ├── activity/
 │   │   ├── activity.ts          # Activity queue and flush logic
 │   │   ├── activity.test.ts
-│   │   └── index.ts
 │   ├── outbound/
 │   │   ├── outbound.ts          # Send outbound messages, filter attachments
 │   │   ├── outbound.test.ts
-│   │   └── index.ts
 │   ├── screenshot/
 │   │   ├── screenshot.ts        # Screenshot capture pipeline
 │   │   ├── screenshot.test.ts
-│   │   └── index.ts
 │   └── permission-ui/
 │       ├── permission-ui.ts     # Permission request UI
 │       ├── permission-ui.test.ts
-│       └── index.ts
 ├── inbound/
 │   ├── inbound.handler.ts       # Main orchestration
 │   └── ...
@@ -59,34 +54,29 @@ core/handlers/
 
 ```
 core/runtime/
-├── runtime/
 │   ├── runtime.ts               # Orchestration only
 │   ├── runtime.types.ts
 │   ├── runtime.test.ts
-│   └── index.ts
 ├── utils/
 │   ├── create-stores/
 │   │   ├── create-stores.ts     # Create all DB stores
 │   │   ├── create-stores.test.ts
-│   │   └── index.ts
 │   ├── create-clock/
 │   │   ├── create-clock.ts     # Create clock instance
 │   │   ├── create-clock.test.ts
-│   │   └── index.ts
 │   ├── create-agent/
 │   │   ├── create-agent.ts     # Create OpenCode client
 │   │   ├── create-agent.test.ts
-│   │   └── index.ts
 │   └── create-state/
 │       ├── create-state.ts
 │       ├── create-state.test.ts
-│       └── index.ts
 └── index.ts
 ```
 
 ## Import Changes
 
 ### Handler imports
+
 ```typescript
 // Old (in envelope.handler.ts)
 import { Effect } from "effect";
@@ -101,6 +91,7 @@ import { captureAndAnalyzeScreenshot } from "./screenshot/screenshot";
 ```
 
 ### Runtime imports
+
 ```typescript
 // Old
 const sessionStore = createLibsqlSessionStore(database);
@@ -109,17 +100,20 @@ const mediaStore = createFileMediaStore(input.config.paths.uploadDir);
 const permissionStore = createLibsqlPermissionStore(database);
 
 // New
-const { sessionStore, agentStore, mediaStore, permissionStore } = createStores(database, input.config.paths);
+const { sessionStore, agentStore, mediaStore, permissionStore } = createStores(
+  database,
+  input.config.paths,
+);
 ```
 
 ## Test Coverage Goals
 
-| Module | Current | Target |
-|--------|---------|--------|
-| `envelope.handler.ts` | 13% | 80% |
-| `inbound.handler.ts` | 5% | 80% |
-| `runtime.ts` | 52% | 80% |
-| Overall | 31% | 80% |
+| Module                | Current | Target |
+| --------------------- | ------- | ------ |
+| `envelope.handler.ts` | 13%     | 80%    |
+| `inbound.handler.ts`  | 5%      | 80%    |
+| `runtime.ts`          | 52%     | 80%    |
+| Overall               | 31%     | 80%    |
 
 ## Migration Steps
 
