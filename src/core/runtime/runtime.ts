@@ -1,46 +1,40 @@
-import { createOpenCodeClient } from "@agent/client";
 import { discoverOpencodeCommands, mergeBridgeCommands } from "@agent/commands";
-import { createSystemClock } from "@infra/time/system-clock";
 import { logger } from "@infra/logger";
-import {
-  createRuntimeDB,
-  createFileMediaStore,
-  createLibsqlAgentStore,
-  createLibsqlPermissionStore,
-  createLibsqlSessionStore,
-} from "@database";
 import { startAllBridges, stopAllBridges, waitForShutdownSignal } from "@bridge/supervisor";
 import type { RuntimeDependencies } from "./runtime.types";
 import { nativeCommands } from "./commands.consts";
-import { createRuntimeState } from "../state/runtime-state";
 import { createInboundHandler } from "../handlers/inbound.handler";
 import { startPluginBridgeServer } from "../handlers/plugin-bridge.handler";
+import { createStores } from "./utils/create-stores/create-stores";
+import { createClock } from "./utils/create-clock/create-clock";
+import { createAgent, warmupAgent } from "./utils/create-agent/create-agent";
+import { createState } from "./utils/create-state/create-state";
 
 export async function startRuntime(input: RuntimeDependencies): Promise<void> {
   logger.info(`[bui] Starting runtime with ${input.bridges.length} bridge(s).`);
   logger.info(`[bui] Using database: ${input.config.paths.dbPath}`);
-  const database = await createRuntimeDB(input.config.paths.dbPath);
 
-  const sessionStore = createLibsqlSessionStore(database);
-  const agentStore = createLibsqlAgentStore(database);
-  const mediaStore = createFileMediaStore(input.config.paths.uploadDir);
-  const permissionStore = createLibsqlPermissionStore(database);
-  const openCodeClient = createOpenCodeClient({
+  const { database: _database, sessionStore, agentStore, mediaStore, permissionStore } = await createStores({
+    dbPath: input.config.paths.dbPath,
+    uploadDir: input.config.paths.uploadDir,
+  });
+
+  const openCodeClient = createAgent({
     opencodeBin: input.config.opencodeBin,
     ...(input.config.opencodeAttachUrl ? { attachUrl: input.config.opencodeAttachUrl } : {}),
   });
 
-  if (process.env.BUI_OPENCODE_EAGER_START !== "0" && openCodeClient.warmup) {
+  if (process.env.BUI_OPENCODE_EAGER_START !== "0") {
     try {
-      await openCodeClient.warmup();
+      await warmupAgent(openCodeClient);
       logger.info("[bui] OpenCode context warmed during runtime startup.");
     } catch (error) {
       logger.warn({ error }, "[bui] OpenCode warmup failed; runtime will retry on first request.");
     }
   }
 
-  const clock = createSystemClock();
-  const state = createRuntimeState();
+  const clock = createClock();
+  const state = createState();
 
   // Start plugin bridge server if enabled
   const pluginBridgeServer = await startPluginBridgeServer({
