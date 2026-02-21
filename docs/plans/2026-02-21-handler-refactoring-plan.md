@@ -254,7 +254,6 @@ async function filterAttachments(
     }
   }
 
-  // Handle skipped attachments notification
   if (skipped.length > 0) {
     await bridge.send({
       bridgeId: bridge.id,
