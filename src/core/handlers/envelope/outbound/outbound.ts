@@ -48,10 +48,10 @@ async function filterAttachments(
     }
   }
 
-  if (skipped.length > 0) {
+  if (skipped.length > 0 && message.conversation) {
     await bridge.send({
       bridgeId: bridge.id,
-      conversation: message.conversation!,
+      conversation: message.conversation,
       text: ["Some attachments were skipped:", ...skipped.map((l) => `- ${l}`)].join("\n"),
     });
   }
